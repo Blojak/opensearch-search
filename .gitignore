@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+*.py[cod]
+.env
+.python-version
+# locally downloaded HF models (optionally cached)
+.cache/
+# large third-party sample PDFs (not tracked; download separately)
+sample_docs/*.pdf
+
+.*
+!.gitignore
+!.env.example

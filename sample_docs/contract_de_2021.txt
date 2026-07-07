@@ -1,0 +1,5 @@
+Dieser Dienstleistungsvertrag regelt die Wartung der Serverinfrastruktur zwischen
+Auftraggeber und Auftragnehmer. Der Auftragnehmer verpflichtet sich, die Verfuegbarkeit
+der Systeme mit mindestens 99,9 Prozent sicherzustellen. Vertraulichkeit ueber alle
+Betriebsgeheimnisse ist waehrend und nach Vertragsende zu wahren. Die Laufzeit betraegt
+zwoelf Monate mit automatischer Verlaengerung.

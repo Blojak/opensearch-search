@@ -1,0 +1,4 @@
+Invoice #2022-0815 issued to Acme Corporation for cloud infrastructure services.
+The total amount due is 12,500 EUR, payable within 30 days of the invoice date.
+Line items include virtual machine hours, object storage, and outbound network traffic.
+Please remit payment to the bank account listed at the bottom of this document.

@@ -1,0 +1,4 @@
+The quarterly security report for Q1 2024 summarizes detected threats and mitigations.
+Phishing attempts increased by 18 percent compared to the previous quarter, while
+successful intrusions dropped to zero thanks to multi-factor authentication rollout.
+The team recommends continued investment in employee security awareness training.

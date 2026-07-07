@@ -1,0 +1,4 @@
+Note interne concernant la sauvegarde des donnees. Les sauvegardes completes ont lieu
+chaque dimanche, et les sauvegardes incrementielles chaque nuit. La restauration doit
+etre testee au moins une fois par trimestre afin de garantir la continuite des activites.
+Les supports de sauvegarde sont chiffres et stockes hors site.
