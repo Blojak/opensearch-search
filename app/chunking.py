@@ -22,8 +22,8 @@ class Chunk:
 
     index: int
     text: str
-    start: int  # inclusive char offset into the source text
-    end: int  # exclusive char offset into the source text
+    start_char: int  # inclusive char offset into the source text
+    end_char: int  # exclusive char offset into the source text
 
     @property
     def char_count(self) -> int:
@@ -63,9 +63,14 @@ def chunk_text(
         lead = len(window) - len(lstripped)  # trimmed leading whitespace
         piece = lstripped.rstrip()
         if piece:
-            start = window_start + lead
+            start_char = window_start + lead
             chunks.append(
-                Chunk(index=idx, text=piece, start=start, end=start + len(piece))
+                Chunk(
+                    index=idx,
+                    text=piece,
+                    start_char=start_char,
+                    end_char=start_char + len(piece),
+                )
             )
             idx += 1
         if window_start + size >= len(text):

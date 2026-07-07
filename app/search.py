@@ -27,7 +27,9 @@ from app.opensearch_store import (
     FIELD_DOC_ID,
     FIELD_DOC_TYPE,
     FIELD_EMBEDDING,
+    FIELD_END_CHAR,
     FIELD_LANGUAGE,
+    FIELD_START_CHAR,
     FIELD_TEXT,
     get_client,
 )
@@ -60,6 +62,8 @@ class SearchHit:
     doc_id: str
     chunk_index: int
     chunk_text: str
+    start_char: int | None  # offset into the original document text (for
+    end_char: int | None  # extracting/highlighting the exact passage)
     highlights: list[str]  # <em>-wrapped fragments (native OpenSearch highlight)
     document: dict
 
@@ -139,6 +143,8 @@ def _hit_from_response(raw: dict) -> SearchHit:
         doc_id=source.get(FIELD_DOC_ID),
         chunk_index=source.get(FIELD_CHUNK_INDEX),
         chunk_text=source.get(FIELD_TEXT),
+        start_char=source.get(FIELD_START_CHAR),
+        end_char=source.get(FIELD_END_CHAR),
         highlights=highlight.get(FIELD_TEXT, []),
         document=_document_from_source(source),
     )

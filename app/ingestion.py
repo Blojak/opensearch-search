@@ -22,12 +22,14 @@ from app.chunking import chunk_text
 from app.embedding import embed_passages
 from app.enums import Classification, DocType, Language
 from app.opensearch_store import (
+    FIELD_BODY,
     FIELD_CHUNK_INDEX,
     FIELD_CLASSIFICATION,
     FIELD_CREATED_AT,
     FIELD_DOC_ID,
     FIELD_DOC_TYPE,
     FIELD_EMBEDDING,
+    FIELD_END_CHAR,
     FIELD_EXTRA,
     FIELD_FILENAME,
     FIELD_INGESTED_AT,
@@ -35,8 +37,10 @@ from app.opensearch_store import (
     FIELD_MIME_TYPE,
     FIELD_SIZE_BYTES,
     FIELD_SOURCE,
+    FIELD_START_CHAR,
     FIELD_TEXT,
     FIELD_TITLE,
+    documents_index,
     get_client,
 )
 from app.config import get_settings
@@ -152,6 +156,8 @@ def ingest_text(content: str, meta: DocumentMeta) -> IngestResult:
             "_source": {
                 **base,
                 FIELD_CHUNK_INDEX: c.index,
+                FIELD_START_CHAR: c.start_char,
+                FIELD_END_CHAR: c.end_char,
                 FIELD_TEXT: c.text,
                 FIELD_EMBEDDING: vector,
             },
@@ -161,6 +167,15 @@ def ingest_text(content: str, meta: DocumentMeta) -> IngestResult:
     # refresh=True so the freshly ingested document is immediately searchable
     # (convenient for a PoC; drop for high-throughput bulk loads).
     bulk(client, actions, refresh=True)
+
+    # Store the full original text once, keyed by doc_id, as the source for
+    # passage extraction (see app.passages.extract_passage).
+    client.index(
+        index=documents_index(),
+        id=doc_id,
+        body={FIELD_BODY: content},
+        refresh=True,
+    )
 
     return IngestResult(
         document_id=doc_id,
@@ -193,5 +208,10 @@ def delete_document(doc_id: str) -> bool:
         index=settings.opensearch_index,
         body={"query": {"term": {FIELD_DOC_ID: doc_id}}},
         refresh=True,
+    )
+    # Drop the stored body too (ignore 404: documents ingested before the body
+    # index existed have no entry).
+    client.delete(
+        index=documents_index(), id=doc_id, refresh=True, ignore=[404]
     )
     return True

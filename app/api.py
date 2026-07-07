@@ -163,6 +163,8 @@ def create_app() -> Flask:
                 "doc_id": hit.doc_id,
                 "chunk_index": hit.chunk_index,
                 "chunk_text": hit.chunk_text,
+                "start_char": hit.start_char,
+                "end_char": hit.end_char,
                 "highlights": hit.highlights,
                 "document": hit.document,
             }

@@ -23,6 +23,10 @@ FIELD_DOC_ID = "doc_id"  # sha256 content hash; groups the chunks of a document
 FIELD_CHUNK_INDEX = "chunk_index"
 FIELD_TEXT = "text"  # analyzed -> BM25 lexical search + highlighting
 FIELD_EMBEDDING = "embedding"  # knn_vector -> semantic search
+# Character offsets of the chunk into the original document text, so a hit can
+# be traced back to its exact passage (original[start_char:end_char] == text).
+FIELD_START_CHAR = "start_char"
+FIELD_END_CHAR = "end_char"
 # Denormalized document metadata (identical on every chunk of a document).
 FIELD_FILENAME = "filename"
 FIELD_TITLE = "title"
@@ -35,6 +39,19 @@ FIELD_CREATED_AT = "created_at"
 FIELD_INGESTED_AT = "ingested_at"
 FIELD_SOURCE = "source"
 FIELD_EXTRA = "extra"
+
+# Field of the sibling "documents" index that stores the full original text
+# once per document (the source for passage extraction).
+FIELD_BODY = "body"
+
+
+def documents_index() -> str:
+    """Name of the sibling index holding one full-text body per document.
+
+    Derived from the chunks index so no extra configuration is needed
+    (e.g. ``chunks`` -> ``chunks_documents``).
+    """
+    return f"{get_settings().opensearch_index}_documents"
 
 
 @lru_cache(maxsize=1)
@@ -70,6 +87,8 @@ def _index_body() -> dict:
             "properties": {
                 FIELD_DOC_ID: {"type": "keyword"},
                 FIELD_CHUNK_INDEX: {"type": "integer"},
+                FIELD_START_CHAR: {"type": "integer"},
+                FIELD_END_CHAR: {"type": "integer"},
                 FIELD_TEXT: {"type": "text"},
                 FIELD_EMBEDDING: {
                     "type": "knn_vector",
@@ -127,12 +146,48 @@ def _hybrid_pipeline_body() -> dict:
 
 
 def ensure_index(client: OpenSearch | None = None) -> None:
-    """Create the index if it does not exist (idempotent)."""
+    """Create the chunks index if missing, and ensure the char-offset fields
+    exist on an already-created index (idempotent).
+
+    The additive ``_mapping`` update lets an index created before the offset
+    fields existed pick them up; it does not backfill existing documents.
+    """
     settings = get_settings()
     client = client or get_client()
     if not client.indices.exists(index=settings.opensearch_index):
         client.indices.create(
             index=settings.opensearch_index, body=_index_body()
+        )
+    client.indices.put_mapping(
+        index=settings.opensearch_index,
+        body={
+            "properties": {
+                FIELD_START_CHAR: {"type": "integer"},
+                FIELD_END_CHAR: {"type": "integer"},
+            }
+        },
+    )
+
+
+def ensure_documents_index(client: OpenSearch | None = None) -> None:
+    """Create the sibling documents index (one stored body per document).
+
+    The ``body`` is stored but not indexed: it is only sliced in Python for
+    passage extraction, never searched.
+    """
+    client = client or get_client()
+    name = documents_index()
+    if not client.indices.exists(index=name):
+        client.indices.create(
+            index=name,
+            body={
+                "settings": {
+                    "index": {"number_of_shards": 1, "number_of_replicas": 0}
+                },
+                "mappings": {
+                    "properties": {FIELD_BODY: {"type": "text", "index": False}}
+                },
+            },
         )
 
 
@@ -148,7 +203,8 @@ def ensure_hybrid_pipeline(client: OpenSearch | None = None) -> None:
 
 
 def ensure_setup(client: OpenSearch | None = None) -> None:
-    """Ensure both the index and the hybrid pipeline exist."""
+    """Ensure the chunks index, the documents index and the hybrid pipeline."""
     client = client or get_client()
     ensure_index(client)
+    ensure_documents_index(client)
     ensure_hybrid_pipeline(client)
