@@ -187,3 +187,38 @@ class SearchQuery(Base):
 
     def __repr__(self) -> str:  # pragma: no cover - debug helper
         return f"<SearchQuery id={self.id} user_id={self.user_id}>"
+
+
+class QueryNotification(Base):
+    """Notification that a user's search duplicates an earlier one.
+
+    Links the ``original`` query to the ``duplicate`` query (both in
+    ``search_queries``) and records which user was notified plus a simple
+    processing ``status`` (defaults to ``pending``).
+    """
+
+    __tablename__ = "query_notifications"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        server_default=text("gen_random_uuid()"),
+    )
+    original_query_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("search_queries.id"), nullable=False,
+    )
+    duplicate_query_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("search_queries.id"), nullable=False,
+    )
+    notified_user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=False,
+    )
+    status: Mapped[str] = mapped_column(
+        String(16), nullable=False, server_default=text("'pending'"),
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now(),
+    )
+
+    def __repr__(self) -> str:  # pragma: no cover - debug helper
+        return f"<QueryNotification id={self.id} status={self.status!r}>"
