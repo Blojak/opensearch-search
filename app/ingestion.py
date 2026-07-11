@@ -115,42 +115,50 @@ def _count_chunks(client, document_id: uuid.UUID, version_number: int) -> int:
     return int(resp["count"])
 
 
+def chunk_action(document: Document, version_number: int, chunk, vector) -> dict:
+    """Build the OpenSearch bulk action for a single chunk of a document version."""
+    settings = get_settings()
+    return {
+        "_index": settings.opensearch_index,
+        "_id": f"{document.id}-v{version_number}-{chunk.index}",
+        "_source": {
+            FIELD_DOCUMENT_ID: str(document.id),
+            FIELD_VERSION_NUMBER: version_number,
+            FIELD_AKTENZEICHEN: document.aktenzeichen,
+            FIELD_VERFAHREN_ID: (
+                str(document.verfahren_id) if document.verfahren_id else None
+            ),
+            FIELD_KLASSIFIZIERUNG: document.klassifizierung,
+            FIELD_MIME_TYPE: document.mime_type,
+            FIELD_CREATED_AT: document.created_at.isoformat(),
+            FIELD_CHUNK_INDEX: chunk.index,
+            FIELD_START_CHAR: chunk.start_char,
+            FIELD_END_CHAR: chunk.end_char,
+            FIELD_TEXT: chunk.text,
+            FIELD_EMBEDDING: vector,
+        },
+    }
+
+
 def index_chunks(
     client,
     document: Document,
     version_number: int,
     chunks,
     vectors,
+    refresh: bool = True,
 ) -> None:
-    """Index one OpenSearch document per chunk of a document version."""
-    settings = get_settings()
-    base = {
-        FIELD_DOCUMENT_ID: str(document.id),
-        FIELD_VERSION_NUMBER: version_number,
-        FIELD_AKTENZEICHEN: document.aktenzeichen,
-        FIELD_VERFAHREN_ID: str(document.verfahren_id) if document.verfahren_id else None,
-        FIELD_KLASSIFIZIERUNG: document.klassifizierung,
-        FIELD_MIME_TYPE: document.mime_type,
-        FIELD_CREATED_AT: document.created_at.isoformat(),
-    }
+    """Index one OpenSearch document per chunk of a document version.
+
+    ``refresh=True`` makes the document immediately searchable (right for a
+    single ingest); bulk rebuilds pass ``refresh=False`` and refresh once at the
+    end.
+    """
     actions = [
-        {
-            "_index": settings.opensearch_index,
-            "_id": f"{document.id}-v{version_number}-{c.index}",
-            "_source": {
-                **base,
-                FIELD_CHUNK_INDEX: c.index,
-                FIELD_START_CHAR: c.start_char,
-                FIELD_END_CHAR: c.end_char,
-                FIELD_TEXT: c.text,
-                FIELD_EMBEDDING: vector,
-            },
-        }
+        chunk_action(document, version_number, c, vector)
         for c, vector in zip(chunks, vectors)
     ]
-    # refresh=True so the freshly ingested document is immediately searchable
-    # (convenient for a PoC; drop for high-throughput bulk loads).
-    bulk(client, actions, refresh=True)
+    bulk(client, actions, refresh=refresh)
 
 
 def ingest_text(content: str, meta: DocumentMeta) -> IngestResult:
