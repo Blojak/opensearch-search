@@ -60,6 +60,45 @@ cp .env.example .env        # adjust if needed (ports, model, weights, ...)
 > embedding model (~2.2 GB) once. **Dashboards** is available at
 > http://localhost:5601 to inspect the index and run queries.
 
+### Embedding model behind a corporate proxy (mirror, CA, offline)
+
+By default the model is pulled from the public HuggingFace Hub. In a
+network-segmented environment, point the loader at an internal mirror and its
+CA certificates via `.env` (all optional, see `.env.example`):
+
+```dotenv
+HF_ENDPOINT=https://huggingface.internal.example   # internal Hub mirror/proxy
+HF_TOKEN=<token>                                    # if the mirror needs auth
+HF_HOME=/opt/models/hf-cache                        # where models are cached
+# TLS: only needed if the corporate CA is NOT already in the system trust store
+CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
+```
+
+**CA certificates.** If the organization's root CA is already installed in the
+system trust store (e.g. via `update-ca-certificates`), nothing is needed — it
+is auto-detected. Otherwise set `CA_BUNDLE` (or the standard `REQUESTS_CA_BUNDLE`
+/ `SSL_CERT_FILE` environment variables); the loader applies it to the whole
+HTTP stack before contacting the Hub.
+
+**Pre-download once, then run fully offline.** Fetch the model a single time
+while the mirror is reachable, then serve it from the local cache with no
+network access:
+
+```bash
+# 1. One-time download into HF_HOME via the internal mirror (network required).
+#    Uses the same settings/CA handling as the app.
+HF_HOME=/opt/models/hf-cache \
+  python -c "from app.embedding import get_model; get_model()"
+
+# 2. For all later runs, add this to .env so the model is loaded from cache only
+#    and the network is never touched (fails fast if something is missing):
+#      HF_HOME=/opt/models/hf-cache
+#      HF_OFFLINE=true
+```
+
+Keep `HF_HOME` pointing at the same directory in both steps — the offline run
+resolves the model exclusively from that cache.
+
 ## Run the API
 
 ```bash
