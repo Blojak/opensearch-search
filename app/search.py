@@ -5,32 +5,38 @@
 * ``hybrid``   – both of the above combined by the normalization search
   pipeline (min-max normalize each score list, then weighted arithmetic mean).
 
-Every mode supports the same metadata filters and asks OpenSearch for native
-highlighting: the ``highlights`` field holds ``<em>``-wrapped fragments of the
-matching text. Pure semantic hits have no query terms, so their highlight list
-is usually empty (the full chunk text is always returned as well).
+Every mode supports the same metadata filters (mirrored from Postgres) and asks
+OpenSearch for native highlighting: the ``highlights`` field holds
+``<em>``-wrapped fragments of the matching text. Pure semantic hits have no
+query terms, so their highlight list is usually empty (the full chunk text is
+always returned as well). ``get_document`` reads document metadata straight from
+Postgres, the source of truth.
 """
 
 from __future__ import annotations
 
 import enum
+import uuid
 from dataclasses import dataclass
 from datetime import datetime
 
 from app.config import get_settings
+from app.db import session_scope
 from app.embedding import embed_query
-from app.enums import Classification, DocType, Language
+from app.models import Document, DocumentVersion
 from app.opensearch_store import (
+    FIELD_AKTENZEICHEN,
     FIELD_CHUNK_INDEX,
-    FIELD_CLASSIFICATION,
     FIELD_CREATED_AT,
-    FIELD_DOC_ID,
-    FIELD_DOC_TYPE,
+    FIELD_DOCUMENT_ID,
     FIELD_EMBEDDING,
     FIELD_END_CHAR,
-    FIELD_LANGUAGE,
+    FIELD_KLASSIFIZIERUNG,
+    FIELD_MIME_TYPE,
     FIELD_START_CHAR,
     FIELD_TEXT,
+    FIELD_VERFAHREN_ID,
+    FIELD_VERSION_NUMBER,
     get_client,
 )
 
@@ -45,11 +51,11 @@ class SearchMode(str, enum.Enum):
 
 @dataclass
 class SearchFilters:
-    """Optional metadata filters applied to the search."""
+    """Optional metadata filters applied to the search (mirrored from Postgres)."""
 
-    doc_type: DocType | None = None
-    language: Language | None = None
-    classification: Classification | None = None
+    aktenzeichen: str | None = None
+    verfahren_id: str | None = None
+    klassifizierung: str | None = None
     created_from: datetime | None = None
     created_to: datetime | None = None
 
@@ -59,29 +65,24 @@ class SearchHit:
     """A single chunk hit enriched with its document metadata."""
 
     score: float
-    doc_id: str
+    document_id: str
+    version_number: int
     chunk_index: int
     chunk_text: str
-    start_char: int | None  # offset into the original document text (for
-    end_char: int | None  # extracting/highlighting the exact passage)
+    start_char: int | None  # offset into the version body text (for extracting
+    end_char: int | None  # / highlighting the exact passage)
     highlights: list[str]  # <em>-wrapped fragments (native OpenSearch highlight)
     document: dict
 
 
-# Metadata fields returned to the caller (everything except the heavy vector
-# and the per-chunk text, which are surfaced separately).
+# Document-level metadata mirrored on every chunk (returned to the caller).
 _META_FIELDS = (
-    "filename",
-    "title",
-    "mime_type",
-    "size_bytes",
-    "language",
-    "doc_type",
-    "classification",
-    "source",
-    "created_at",
-    "ingested_at",
-    "extra",
+    FIELD_AKTENZEICHEN,
+    FIELD_VERFAHREN_ID,
+    FIELD_KLASSIFIZIERUNG,
+    FIELD_MIME_TYPE,
+    FIELD_CREATED_AT,
+    FIELD_VERSION_NUMBER,
 )
 
 _HIGHLIGHT = {
@@ -97,12 +98,12 @@ def _filter_clauses(filters: SearchFilters | None) -> list[dict]:
         return []
 
     clauses: list[dict] = []
-    if filters.doc_type is not None:
-        clauses.append({"term": {FIELD_DOC_TYPE: filters.doc_type.value}})
-    if filters.language is not None:
-        clauses.append({"term": {FIELD_LANGUAGE: filters.language.value}})
-    if filters.classification is not None:
-        clauses.append({"term": {FIELD_CLASSIFICATION: filters.classification.value}})
+    if filters.aktenzeichen is not None:
+        clauses.append({"term": {FIELD_AKTENZEICHEN: filters.aktenzeichen}})
+    if filters.verfahren_id is not None:
+        clauses.append({"term": {FIELD_VERFAHREN_ID: filters.verfahren_id}})
+    if filters.klassifizierung is not None:
+        clauses.append({"term": {FIELD_KLASSIFIZIERUNG: filters.klassifizierung}})
     if filters.created_from is not None or filters.created_to is not None:
         rng: dict = {}
         if filters.created_from is not None:
@@ -128,7 +129,7 @@ def _semantic_query(vector: list[float], k: int, clauses: list[dict]) -> dict:
 
 def _document_from_source(source: dict) -> dict:
     """Extract the document-level metadata from a chunk's ``_source``."""
-    doc = {"id": source.get(FIELD_DOC_ID)}
+    doc = {"id": source.get(FIELD_DOCUMENT_ID)}
     for field in _META_FIELDS:
         doc[field] = source.get(field)
     return doc
@@ -140,7 +141,8 @@ def _hit_from_response(raw: dict) -> SearchHit:
     highlight = raw.get("highlight", {})
     return SearchHit(
         score=raw["_score"],
-        doc_id=source.get(FIELD_DOC_ID),
+        document_id=source.get(FIELD_DOCUMENT_ID),
+        version_number=source.get(FIELD_VERSION_NUMBER),
         chunk_index=source.get(FIELD_CHUNK_INDEX),
         chunk_text=source.get(FIELD_TEXT),
         start_char=source.get(FIELD_START_CHAR),
@@ -192,30 +194,64 @@ def search(
     return [_hit_from_response(h) for h in response["hits"]["hits"]]
 
 
-def get_document(doc_id: str) -> dict | None:
-    """Load a document's metadata plus its ordered chunk texts, or ``None``."""
+def _document_chunks(client, document_id: uuid.UUID, version_number: int) -> list[dict]:
+    """Ordered chunk texts of a document version, read from OpenSearch."""
     settings = get_settings()
-    client = get_client()
     response = client.search(
         index=settings.opensearch_index,
         body={
             "size": 10_000,
-            "query": {"term": {FIELD_DOC_ID: doc_id}},
+            "query": {
+                "bool": {
+                    "must": [
+                        {"term": {FIELD_DOCUMENT_ID: str(document_id)}},
+                        {"term": {FIELD_VERSION_NUMBER: version_number}},
+                    ]
+                }
+            },
             "sort": [{FIELD_CHUNK_INDEX: "asc"}],
             "_source": {"excludes": [FIELD_EMBEDDING]},
         },
     )
-    hits = response["hits"]["hits"]
-    if not hits:
-        return None
-
-    doc = _document_from_source(hits[0]["_source"])
-    doc["num_chunks"] = len(hits)
-    doc["chunks"] = [
+    return [
         {
             "chunk_index": h["_source"].get(FIELD_CHUNK_INDEX),
             "text": h["_source"].get(FIELD_TEXT),
         }
-        for h in hits
+        for h in response["hits"]["hits"]
     ]
-    return doc
+
+
+def get_document(document_id: uuid.UUID) -> dict | None:
+    """Load a document's metadata from Postgres plus its ordered chunks, or
+    ``None`` if it does not exist. Soft-deleted documents are still returned
+    (with ``deleted_at`` set)."""
+    client = get_client()
+    with session_scope() as session:
+        document = session.get(Document, document_id)
+        if document is None:
+            return None
+        version = (
+            session.query(DocumentVersion)
+            .filter(
+                DocumentVersion.document_id == document.id,
+                DocumentVersion.version_number == document.current_version,
+            )
+            .one_or_none()
+        )
+        chunks = _document_chunks(client, document.id, document.current_version)
+        return {
+            "id": str(document.id),
+            "aktenzeichen": document.aktenzeichen,
+            "verfahren_id": str(document.verfahren_id) if document.verfahren_id else None,
+            "klassifizierung": document.klassifizierung,
+            "s3_object_key": document.s3_object_key,
+            "mime_type": document.mime_type,
+            "created_by": str(document.created_by),
+            "created_at": document.created_at.isoformat(),
+            "current_version": document.current_version,
+            "deleted_at": document.deleted_at.isoformat() if document.deleted_at else None,
+            "content_hash": version.content_hash if version else None,
+            "num_chunks": len(chunks),
+            "chunks": chunks,
+        }
