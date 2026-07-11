@@ -22,7 +22,7 @@ from sqlalchemy import (
     func,
     text,
 )
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import Base
@@ -157,3 +157,33 @@ class DocumentVersion(Base):
             f"<DocumentVersion id={self.id} document_id={self.document_id} "
             f"version={self.version_number}>"
         )
+
+
+class SearchQuery(Base):
+    """A search query issued by a user, recorded for analytics/deduplication.
+
+    ``query_hash`` is a stable fingerprint of the normalized query used to
+    detect duplicate searches; ``filters`` stores the structured filter payload
+    as JSONB and ``result_count`` the number of hits returned.
+    """
+
+    __tablename__ = "search_queries"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        server_default=text("gen_random_uuid()"),
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=False,
+    )
+    query_text: Mapped[str] = mapped_column(Text, nullable=False)
+    query_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    filters: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    result_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now(),
+    )
+
+    def __repr__(self) -> str:  # pragma: no cover - debug helper
+        return f"<SearchQuery id={self.id} user_id={self.user_id}>"
