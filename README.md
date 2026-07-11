@@ -14,19 +14,24 @@ document that carries, side by side:
 
 - `text` — analyzed → **BM25 lexical** search + highlighting
 - `embedding` — `knn_vector` (HNSW, cosine) → **semantic** search
-- denormalized document metadata (`doc_id`, `filename`, `title`, `language`,
-  `doc_type`, `classification`, `created_at`, `source`, `extra`, …) → filtering
+- document metadata mirrored from Postgres (`document_id`, `version_number`,
+  `aktenzeichen`, `verfahren_id`, `klassifizierung`, `mime_type`, `created_at`)
+  → filtering
 
-The relational metadata schema — `documents`, `document_versions` (append-only),
-`search_queries`, `query_notifications`, plus placeholder `users`/`verfahren` —
-lives in SQLAlchemy models (`app/models.py`) and is managed with Alembic
-migrations. In OpenSearch, the sha256 content hash is the `doc_id`; each chunk's
-`_id` is `"{doc_id}-{chunk_index}"`, so re-ingesting is idempotent. Highlighting
-is done natively by OpenSearch (`<em>` fragments).
+The relational metadata schema — `documents`, `document_versions` (append-only,
+holds the `body_text`), `search_queries`, `query_notifications`, plus placeholder
+`users`/`verfahren` — lives in SQLAlchemy models (`app/models.py`) and is managed
+with Alembic migrations. Ingestion writes a `Document` and its first
+`DocumentVersion` to Postgres, then derives the OpenSearch chunks; a chunk's
+`_id` is `"{document_id}-v{version_number}-{chunk_index}"`. Deduplication is by
+`content_hash`. Highlighting is done natively by OpenSearch (`<em>` fragments).
 
-> **Status:** the Postgres layer is the data foundation only — schema and
-> migrations are in place, but the ingestion/search code path still reads and
-> writes OpenSearch exclusively. Wiring Postgres ↔ OpenSearch is the next step.
+> **Status:** PostgreSQL is the source of truth end to end — ingestion, search,
+> fetch and (soft-)delete all go through it, and the OpenSearch index is derived
+> and can be rebuilt from Postgres with `python -m app.reindex` (see
+> [Rebuilding the index](#rebuilding-the-index-opensearch-is-derived)).
+> `search_queries` / `query_notifications` are schema-only so far (query logging
+> and duplicate notifications are a later feature).
 
 ### Search modes
 
@@ -117,22 +122,26 @@ python -m app.api          # serves on http://localhost:5002 (API_PORT)
 ```
 
 The OpenSearch index and the hybrid search pipeline are created automatically on
-startup (idempotent).
+startup (idempotent). Interactive API docs (Swagger UI) are served at
+**http://localhost:5002/apidocs/**, the raw OpenAPI spec at `/apispec_1.json`.
 
 ## Example requests
 
 ### Ingest a document
 
+`created_by` (and the optional `verfahren_id`) must reference rows that already
+exist in Postgres. `klassifizierung` is a free string for now — later it will be
+assigned by an ML classifier using the police taxonomy.
+
 ```bash
 curl -s -X POST http://localhost:5002/documents \
   -H 'Content-Type: application/json' \
   -d '{
-    "filename": "report_en_2024.txt",
-    "title": "Q1 2024 Security Report",
-    "language": "en",
-    "doc_type": "report",
-    "classification": "internal",
-    "created_at": "2024-03-31T00:00:00+00:00",
+    "aktenzeichen": "AZ-2026-0001",
+    "verfahren_id": "111f3f39-54f7-435e-a4bf-47dc088c5e79",
+    "klassifizierung": "VS-NfD",
+    "s3_object_key": "documents/az-2026-0001/report.txt",
+    "created_by": "85709c0d-3a9b-4b72-9bd2-ebf672982868",
     "path": "sample_docs/report_en_2024.txt"
   }'
 ```
@@ -141,7 +150,7 @@ Pass `"content": "..."` instead of `"path"` to ingest raw text. Response
 (`201` created, `200` if deduplicated by content hash):
 
 ```json
-{"document_id": "9263...", "filename": "report_en_2024.txt", "num_chunks": 1, "deduplicated": false}
+{"document_id": "0bbafd99-...", "version_number": 1, "aktenzeichen": "AZ-2026-0001", "num_chunks": 1, "deduplicated": false}
 ```
 
 ### Search (mode + optional filters)
@@ -153,11 +162,13 @@ curl -s -X POST http://localhost:5002/search \
     "query": "phishing attempts",
     "mode": "lexical",
     "limit": 5,
-    "filters": {"language": "en", "doc_type": "report"}
+    "filters": {"aktenzeichen": "AZ-2026-0001", "klassifizierung": "VS-NfD"}
   }'
 ```
 
-`mode` is one of `lexical` | `semantic` | `hybrid` (default `hybrid`). Response:
+`mode` is one of `lexical` | `semantic` | `hybrid` (default `hybrid`); the
+filters (`aktenzeichen`, `verfahren_id`, `klassifizierung`, `created_from` /
+`created_to`) are all optional. Response:
 
 ```json
 {
@@ -166,12 +177,13 @@ curl -s -X POST http://localhost:5002/search \
   "count": 1,
   "results": [
     {
-      "score": 2.47,
-      "doc_id": "9263...",
+      "score": 0.58,
+      "document_id": "0bbafd99-...",
+      "version_number": 1,
       "chunk_index": 0,
       "chunk_text": "The quarterly security report ...",
       "highlights": ["<em>Phishing</em> <em>attempts</em> increased by 18 percent ..."],
-      "document": {"id": "9263...", "filename": "report_en_2024.txt", "language": "en", "doc_type": "report", "...": "..."}
+      "document": {"id": "0bbafd99-...", "aktenzeichen": "AZ-2026-0001", "klassifizierung": "VS-NfD", "...": "..."}
     }
   ]
 }
@@ -184,14 +196,54 @@ directly to show the matching terms. Semantic hits have no query terms, so their
 ### Fetch / delete a document
 
 ```bash
-curl -s http://localhost:5002/documents/<doc_id>          # metadata + ordered chunks
-curl -s -X DELETE http://localhost:5002/documents/<doc_id>  # remove all its chunks
+curl -s http://localhost:5002/documents/<document_id>          # Postgres metadata + ordered chunks
+curl -s -X DELETE http://localhost:5002/documents/<document_id>  # soft-delete + drop chunks from OpenSearch
 ```
+
+`DELETE` sets `deleted_at` in Postgres (the row is kept for auditing) and removes
+the document's chunks from OpenSearch, so it disappears from search while
+remaining on record.
+
+## Rebuilding the index (OpenSearch is derived)
+
+OpenSearch holds no data that cannot be reconstructed — Postgres is the source of
+truth. Rebuild the entire search index from Postgres with:
+
+```bash
+python -m app.reindex      # -> "Reindexed N document(s) into OpenSearch."
+```
+
+`rebuild_index()` (in `app/reindex.py`):
+
+1. **drops and recreates** the `chunks` index with the current mapping
+   (`recreate_index()`) and re-puts the hybrid search pipeline;
+2. iterates every **live** document (`deleted_at IS NULL`);
+3. loads each document's **current version** (`document_versions` at
+   `documents.current_version`) and re-chunks → re-embeds → re-indexes its
+   `body_text`.
+
+Run it after changing the OpenSearch mapping/analyzers, after changing
+`CHUNK_SIZE` / `CHUNK_OVERLAP` / `EMBEDDING_MODEL`, or to recover from OpenSearch
+data loss — the result is always consistent with Postgres.
+
+### Versioning
+
+The rebuild is *not* a versioning mechanism; it only respects one. Each document
+has an append-only history in `document_versions` and a `current_version`
+pointer. Every OpenSearch chunk carries its `version_number`, and a chunk's `_id`
+is `"{document_id}-v{version_number}-{chunk_index}"`, so versions never collide.
+The rebuild always indexes **only the current version** of each live document.
+
+> **Not implemented yet:** creating a *new* version (v2, v3) of an existing
+> document. Ingesting identical content is deduplicated by `content_hash`; any
+> other ingest creates a **new** document at version 1. The full `version_number`
+> plumbing (Postgres column, OpenSearch field, `_id` scheme) is already in place,
+> so adding version increments later needs no schema or index change.
 
 ## Comparing with qdrant-search
 
-Both projects share the same chunker, embedding model and metadata vocabulary,
-so results are comparable. Key differences:
+Both projects share the same chunker and embedding model, so results are
+comparable. Key differences:
 
 | | qdrant-search | opensearch-search |
 |---|---|---|
