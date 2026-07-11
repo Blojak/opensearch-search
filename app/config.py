@@ -44,6 +44,21 @@ class Settings(BaseSettings):
     embedding_model: str = "intfloat/multilingual-e5-large"
     vector_size: int = 1024
 
+    # --- HuggingFace Hub access (corporate environment) ---
+    # Endpoint/mirror for the Hub (e.g. an internal proxy); exported as
+    # HF_ENDPOINT before the model loads. Empty means the default public hub.
+    hf_endpoint: str | None = None
+    # Access token, if the internal mirror requires authentication.
+    hf_token: str | None = None
+    # Cache directory for downloaded models (exported as HF_HOME).
+    hf_home: str | None = None
+    # Serve the model only from the local cache, never hit the network.
+    hf_offline: bool = False
+    # Path to a CA bundle (PEM) for TLS verification behind a corporate proxy.
+    # If unset, the standard REQUESTS_CA_BUNDLE/SSL_CERT_FILE env vars and the
+    # system trust store are auto-detected (see app/embedding.py).
+    ca_bundle: str | None = None
+
     # --- Chunking ---
     chunk_size: int = 512
     chunk_overlap: int = 64
