@@ -8,19 +8,25 @@ PostgreSQL as source of truth) — built to compare the two approaches.
 
 ## Architecture
 
-**OpenSearch is the single store.** Every chunk becomes one OpenSearch document
-that carries, side by side:
+**PostgreSQL is the intended source of truth for document metadata; OpenSearch
+is the derived, rebuildable search index.** Every chunk becomes one OpenSearch
+document that carries, side by side:
 
 - `text` — analyzed → **BM25 lexical** search + highlighting
 - `embedding` — `knn_vector` (HNSW, cosine) → **semantic** search
 - denormalized document metadata (`doc_id`, `filename`, `title`, `language`,
   `doc_type`, `classification`, `created_at`, `source`, `extra`, …) → filtering
 
-No separate metadata database: unlike the Qdrant sibling, there is no Postgres,
-no Alembic and no stored full-text body. The sha256 content hash is the
-`doc_id`; each chunk's `_id` is `"{doc_id}-{chunk_index}"`, so re-ingesting is
-idempotent. Highlighting is done natively by OpenSearch (`<em>` fragments), so
-no character offsets are needed.
+The relational metadata schema — `documents`, `document_versions` (append-only),
+`search_queries`, `query_notifications`, plus placeholder `users`/`verfahren` —
+lives in SQLAlchemy models (`app/models.py`) and is managed with Alembic
+migrations. In OpenSearch, the sha256 content hash is the `doc_id`; each chunk's
+`_id` is `"{doc_id}-{chunk_index}"`, so re-ingesting is idempotent. Highlighting
+is done natively by OpenSearch (`<em>` fragments).
+
+> **Status:** the Postgres layer is the data foundation only — schema and
+> migrations are in place, but the ingestion/search code path still reads and
+> writes OpenSearch exclusively. Wiring Postgres ↔ OpenSearch is the next step.
 
 ### Search modes
 
@@ -37,13 +43,14 @@ score list is min-max normalized, then combined as a weighted arithmetic mean
 ## Tech stack
 
 Python 3.13, OpenSearch 2.19 (kNN + hybrid search pipeline), opensearch-py,
-sentence-transformers (`intfloat/multilingual-e5-large`), Flask,
-pydantic-settings. All open source. Infrastructure via Docker Compose.
+PostgreSQL 17 with SQLAlchemy 2.0 + Alembic (metadata store), sentence-transformers
+(`intfloat/multilingual-e5-large`), Flask, pydantic-settings. All open source.
+Infrastructure (OpenSearch, Dashboards, PostgreSQL, pgAdmin) via Docker Compose.
 
 ## Setup
 
 ```bash
-# 1. Start infrastructure (OpenSearch + OpenSearch Dashboards)
+# 1. Start infrastructure (OpenSearch, Dashboards, PostgreSQL, pgAdmin)
 docker compose up -d
 
 # 2. Python environment
@@ -53,12 +60,16 @@ pip install -r requirements.txt
 
 # 3. Configuration
 cp .env.example .env        # adjust if needed (ports, model, weights, ...)
+
+# 4. Create the metadata schema in PostgreSQL
+alembic upgrade head
 ```
 
 > The security plugin is disabled for the local PoC, so the app talks plain
 > HTTP on port `9200` without auth. The first ingest/search downloads the
 > embedding model (~2.2 GB) once. **Dashboards** is available at
-> http://localhost:5601 to inspect the index and run queries.
+> http://localhost:5601 to inspect the index and run queries; **pgAdmin** at
+> http://localhost:5050 (the Postgres connection is pre-registered).
 
 ### Embedding model behind a corporate proxy (mirror, CA, offline)
 
@@ -184,7 +195,7 @@ so results are comparable. Key differences:
 
 | | qdrant-search | opensearch-search |
 |---|---|---|
-| stores | Postgres (truth) + Qdrant (vectors) | OpenSearch only |
+| stores | Postgres (truth) + Qdrant (vectors) | Postgres (metadata truth) + OpenSearch (search index) |
 | search | semantic only | lexical + semantic + hybrid |
 | highlighting | char offsets into stored body | native `<em>` fragments |
 | filters | Qdrant payload filter | OpenSearch keyword/date filter |
