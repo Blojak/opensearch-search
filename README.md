@@ -130,8 +130,16 @@ startup (idempotent). Interactive API docs (Swagger UI) are served at
 ### Ingest a document
 
 `created_by` (and the optional `verfahren_id`) must reference rows that already
-exist in Postgres. `klassifizierung` is a free string for now — later it will be
-assigned by an ML classifier using the police taxonomy.
+exist in Postgres. `users` / `verfahren` are owned by another bounded context and
+have no API, so for local testing seed a fixed user + verfahren (idempotent, uses
+the UUIDs below):
+
+```bash
+python scripts/seed_dev.py
+```
+
+`klassifizierung` is a free string for now — later it will be assigned by an ML
+classifier using the police taxonomy.
 
 ```bash
 curl -s -X POST http://localhost:5002/documents \
