@@ -21,6 +21,13 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
+    # --- PostgreSQL (metadata - single source of truth) ---
+    postgres_user: str = "osearch"
+    postgres_password: str = "osearch"
+    postgres_db: str = "osearch"
+    postgres_host: str = "localhost"
+    postgres_port: int = 5433
+
     # --- OpenSearch (single store: full text, vectors and metadata) ---
     opensearch_host: str = "localhost"
     opensearch_port: int = 9200
@@ -50,6 +57,14 @@ class Settings(BaseSettings):
     # --- Flask API ---
     api_host: str = "0.0.0.0"
     api_port: int = 5002
+
+    @property
+    def database_url(self) -> str:
+        """SQLAlchemy connection URL for PostgreSQL (psycopg2 driver)."""
+        return (
+            f"postgresql+psycopg2://{self.postgres_user}:{self.postgres_password}"
+            f"@{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
+        )
 
 
 @lru_cache

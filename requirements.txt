@@ -3,6 +3,10 @@ opensearch-py==2.8.0
 pydantic-settings==2.6.1
 Flask==3.1.0
 
+# PostgreSQL (metadata store - source of truth)
+sqlalchemy==2.0.36
+psycopg2-binary==2.9.10
+
 # Embeddings (local, multilingual)
 sentence-transformers==3.3.1
 
