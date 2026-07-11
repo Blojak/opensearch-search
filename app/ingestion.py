@@ -115,7 +115,7 @@ def _count_chunks(client, document_id: uuid.UUID, version_number: int) -> int:
     return int(resp["count"])
 
 
-def _index_chunks(
+def index_chunks(
     client,
     document: Document,
     version_number: int,
@@ -211,7 +211,7 @@ def ingest_text(content: str, meta: DocumentMeta) -> IngestResult:
         session.add(version)
 
         vectors = embed_passages([c.text for c in chunks])
-        _index_chunks(client, document, version_number=1, chunks=chunks, vectors=vectors)
+        index_chunks(client, document, version_number=1, chunks=chunks, vectors=vectors)
 
         return IngestResult(
             document_id=document.id,
