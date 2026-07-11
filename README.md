@@ -207,13 +207,15 @@ remaining on record.
 ## Rebuilding the index (OpenSearch is derived)
 
 OpenSearch holds no data that cannot be reconstructed — Postgres is the source of
-truth. Rebuild the entire search index from Postgres with:
+truth. Reindex from Postgres with:
 
 ```bash
-python -m app.reindex      # -> "Reindexed N document(s) into OpenSearch."
+python -m app.reindex                   # full rebuild (drops + recreates the index)
+python -m app.reindex --document <uuid>  # just one document's current version
+python -m app.reindex --verfahren <uuid> # all live documents of a verfahren
 ```
 
-`rebuild_index()` (in `app/reindex.py`):
+The **full rebuild** `rebuild_index()` (in `app/reindex.py`):
 
 1. **drops and recreates** the `chunks` index with the current mapping
    (`recreate_index()`) and re-puts the hybrid search pipeline;
@@ -222,9 +224,13 @@ python -m app.reindex      # -> "Reindexed N document(s) into OpenSearch."
    `documents.current_version`) and re-chunks → re-embeds → re-indexes its
    `body_text`.
 
-Run it after changing the OpenSearch mapping/analyzers, after changing
-`CHUNK_SIZE` / `CHUNK_OVERLAP` / `EMBEDDING_MODEL`, or to recover from OpenSearch
-data loss — the result is always consistent with Postgres.
+Embeddings dominate the cost, so chunks are embedded in batches across documents
+and indexed with `refresh=False`, refreshing the index once at the end. A full
+rebuild is meant to be the **exception** — after a mapping/analyzer change, after
+changing `CHUNK_SIZE` / `CHUNK_OVERLAP` / `EMBEDDING_MODEL`, or to recover from
+OpenSearch data loss. Day to day, use the **partial** `--document` / `--verfahren`
+reindex (it drops just that document's chunks and re-indexes its current version
+over the live index), so the expensive full rebuild stays rare.
 
 ### Versioning
 
