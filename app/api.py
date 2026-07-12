@@ -67,6 +67,18 @@ SWAGGER_TEMPLATE = {
         {"name": "documents"},
         {"name": "search"},
     ],
+    # Swagger 2.0 has no native bearer type; an apiKey in the Authorization
+    # header is the standard way to express it and gives the UI an Authorize
+    # button. Applied to every operation except /health (see its docstring).
+    "securityDefinitions": {
+        "bearerAuth": {
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header",
+            "description": "OIDC access token, sent as 'Bearer <jwt>'.",
+        }
+    },
+    "security": [{"bearerAuth": []}],
     "definitions": {
         "Error": {
             "type": "object",
@@ -74,7 +86,7 @@ SWAGGER_TEMPLATE = {
         },
         "IngestRequest": {
             "type": "object",
-            "required": ["aktenzeichen", "klassifizierung", "s3_object_key", "created_by"],
+            "required": ["aktenzeichen", "klassifizierung", "s3_object_key"],
             "properties": {
                 "aktenzeichen": {"type": "string", "example": "AZ-2026-0001"},
                 "verfahren_id": {
@@ -93,11 +105,6 @@ SWAGGER_TEMPLATE = {
                 "s3_object_key": {
                     "type": "string",
                     "example": "documents/az-2026-0001/original.pdf",
-                },
-                "created_by": {
-                    "type": "string",
-                    "format": "uuid",
-                    "description": "User UUID; must reference an existing user.",
                 },
                 "language": {
                     "type": "string",
@@ -241,8 +248,12 @@ def _parse_uuid(value: Any, field: str) -> uuid.UUID | None:
         raise ApiError(f"invalid {field}: {value!r} (expected a UUID)") from exc
 
 
-def _parse_meta(body: dict) -> DocumentMeta:
-    """Build DocumentMeta from a request body."""
+def _parse_meta(body: dict, created_by: uuid.UUID) -> DocumentMeta:
+    """Build DocumentMeta from a request body.
+
+    ``created_by`` is passed in from the authenticated principal, never read from
+    the body: a client must not be able to attribute a document to someone else.
+    """
     aktenzeichen = body.get("aktenzeichen")
     if not aktenzeichen:
         raise ApiError("'aktenzeichen' is required")
@@ -252,9 +263,6 @@ def _parse_meta(body: dict) -> DocumentMeta:
     s3_object_key = body.get("s3_object_key")
     if not s3_object_key:
         raise ApiError("'s3_object_key' is required")
-    created_by = _parse_uuid(body.get("created_by"), "created_by")
-    if created_by is None:
-        raise ApiError("'created_by' is required")
 
     # Optional: an explicit language overrides the auto-detection at ingest.
     language = _parse_enum(Language, body.get("language"), "language")
@@ -294,6 +302,7 @@ def create_app() -> Flask:
         """Liveness probe.
         ---
         tags: [health]
+        security: []   # the only unauthenticated endpoint
         responses:
           200:
             description: Service is up
@@ -321,12 +330,15 @@ def create_app() -> Flask:
           400:
             description: Validation error
             schema: {$ref: '#/definitions/Error'}
+          401:
+            description: Missing or invalid bearer token
+            schema: {$ref: '#/definitions/Error'}
         """
         body = request.get_json(silent=True)
         if not isinstance(body, dict):
             raise ApiError("request body must be a JSON object")
 
-        meta = _parse_meta(body)
+        meta = _parse_meta(body, created_by=g.user_id)
         path = body.get("path")
         content = body.get("content")
 
@@ -368,6 +380,9 @@ def create_app() -> Flask:
           400:
             description: Invalid id
             schema: {$ref: '#/definitions/Error'}
+          401:
+            description: Missing or invalid bearer token
+            schema: {$ref: '#/definitions/Error'}
           404:
             description: Not found
             schema: {$ref: '#/definitions/Error'}
@@ -396,6 +411,9 @@ def create_app() -> Flask:
           400:
             description: Invalid id
             schema: {$ref: '#/definitions/Error'}
+          401:
+            description: Missing or invalid bearer token
+            schema: {$ref: '#/definitions/Error'}
           404:
             description: Not found
             schema: {$ref: '#/definitions/Error'}
@@ -422,6 +440,9 @@ def create_app() -> Flask:
             schema: {$ref: '#/definitions/SearchResponse'}
           400:
             description: Validation error
+            schema: {$ref: '#/definitions/Error'}
+          401:
+            description: Missing or invalid bearer token
             schema: {$ref: '#/definitions/Error'}
         """
         body = request.get_json(silent=True)
