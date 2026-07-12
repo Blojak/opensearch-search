@@ -244,6 +244,27 @@ OpenSearch data loss. Day to day, use the **partial** `--document` / `--verfahre
 reindex (it drops just that document's chunks and re-indexes its current version
 over the live index), so the expensive full rebuild stays rare.
 
+Reach for the partial reindex whenever metadata changed **in Postgres** — a
+corrected `klassifizierung`, a reassigned `verfahren_id`, a backfilled
+`language`. The chunks carry a denormalized copy of those fields, so they stay
+stale until the document is re-derived.
+
+> **Reindex derives, it does not recompute.** It mirrors `documents.language` /
+> `documents.klassifizierung` exactly as stored in Postgres; language detection
+> only runs at ingest. Always fix Postgres **first**, then reindex.
+
+### Backfilling the language of older documents
+
+Documents ingested before the `language` field existed keep the `'unknown'`
+default — and a reindex will not fix that (see the note above). This detects the
+language from the current version's body text, writes it to Postgres and then
+reindexes exactly those documents (idempotent):
+
+```bash
+python scripts/backfill_language.py --dry-run   # report only, write nothing
+python scripts/backfill_language.py             # write + reindex
+```
+
 ### Versioning
 
 The rebuild is *not* a versioning mechanism; it only respects one. Each document
