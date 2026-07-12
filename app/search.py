@@ -32,6 +32,7 @@ from app.opensearch_store import (
     FIELD_EMBEDDING,
     FIELD_END_CHAR,
     FIELD_KLASSIFIZIERUNG,
+    FIELD_LANGUAGE,
     FIELD_MIME_TYPE,
     FIELD_START_CHAR,
     FIELD_TEXT,
@@ -56,6 +57,7 @@ class SearchFilters:
     aktenzeichen: str | None = None
     verfahren_id: str | None = None
     klassifizierung: str | None = None
+    language: str | None = None
     created_from: datetime | None = None
     created_to: datetime | None = None
 
@@ -80,6 +82,7 @@ _META_FIELDS = (
     FIELD_AKTENZEICHEN,
     FIELD_VERFAHREN_ID,
     FIELD_KLASSIFIZIERUNG,
+    FIELD_LANGUAGE,
     FIELD_MIME_TYPE,
     FIELD_CREATED_AT,
     FIELD_VERSION_NUMBER,
@@ -104,6 +107,8 @@ def _filter_clauses(filters: SearchFilters | None) -> list[dict]:
         clauses.append({"term": {FIELD_VERFAHREN_ID: filters.verfahren_id}})
     if filters.klassifizierung is not None:
         clauses.append({"term": {FIELD_KLASSIFIZIERUNG: filters.klassifizierung}})
+    if filters.language is not None:
+        clauses.append({"term": {FIELD_LANGUAGE: filters.language}})
     if filters.created_from is not None or filters.created_to is not None:
         rng: dict = {}
         if filters.created_from is not None:
@@ -247,6 +252,7 @@ def get_document(document_id: uuid.UUID) -> dict | None:
             "klassifizierung": document.klassifizierung,
             "s3_object_key": document.s3_object_key,
             "mime_type": document.mime_type,
+            "language": document.language,
             "created_by": str(document.created_by),
             "created_at": document.created_at.isoformat(),
             "current_version": document.current_version,

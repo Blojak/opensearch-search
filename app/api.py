@@ -22,6 +22,7 @@ from flasgger import Swagger
 from flask import Flask, jsonify, request
 
 from app.config import get_settings
+from app.enums import Language
 from app.ingestion import DocumentMeta, delete_document, ingest_file, ingest_text
 from app.opensearch_store import ensure_setup
 from app.search import SearchFilters, SearchMode, get_document, search
@@ -76,6 +77,14 @@ SWAGGER_TEMPLATE = {
                     "format": "uuid",
                     "description": "User UUID; must reference an existing user.",
                 },
+                "language": {
+                    "type": "string",
+                    "enum": [member.value for member in Language],
+                    "description": (
+                        "Optional. Auto-detected from the content when omitted; "
+                        "supplying it overrides the detection."
+                    ),
+                },
                 "content": {
                     "type": "string",
                     "description": "Raw text to ingest. Provide either content or path.",
@@ -102,6 +111,10 @@ SWAGGER_TEMPLATE = {
                 "aktenzeichen": {"type": "string"},
                 "verfahren_id": {"type": "string", "format": "uuid"},
                 "klassifizierung": {"type": "string"},
+                "language": {
+                    "type": "string",
+                    "enum": [member.value for member in Language],
+                },
                 "created_from": {"type": "string", "format": "date-time"},
                 "created_to": {"type": "string", "format": "date-time"},
             },
@@ -129,6 +142,7 @@ SWAGGER_TEMPLATE = {
                 "klassifizierung": {"type": "string"},
                 "s3_object_key": {"type": "string"},
                 "mime_type": {"type": "string"},
+                "language": {"type": "string"},
                 "created_by": {"type": "string", "format": "uuid"},
                 "created_at": {"type": "string", "format": "date-time"},
                 "current_version": {"type": "integer"},
@@ -220,12 +234,16 @@ def _parse_meta(body: dict) -> DocumentMeta:
     if created_by is None:
         raise ApiError("'created_by' is required")
 
+    # Optional: an explicit language overrides the auto-detection at ingest.
+    language = _parse_enum(Language, body.get("language"), "language")
+
     return DocumentMeta(
         aktenzeichen=aktenzeichen,
         klassifizierung=klassifizierung,
         s3_object_key=s3_object_key,
         created_by=created_by,
         verfahren_id=_parse_uuid(body.get("verfahren_id"), "verfahren_id"),
+        language=language.value if language else None,
     )
 
 
@@ -386,10 +404,12 @@ def create_app() -> Flask:
             raise ApiError("'limit' must be a positive integer")
 
         raw_filters = body.get("filters") or {}
+        filter_language = _parse_enum(Language, raw_filters.get("language"), "language")
         filters = SearchFilters(
             aktenzeichen=raw_filters.get("aktenzeichen"),
             verfahren_id=raw_filters.get("verfahren_id"),
             klassifizierung=raw_filters.get("klassifizierung"),
+            language=filter_language.value if filter_language else None,
             created_from=_parse_dt(raw_filters.get("created_from"), "created_from"),
             created_to=_parse_dt(raw_filters.get("created_to"), "created_to"),
         )
