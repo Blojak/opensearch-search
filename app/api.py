@@ -28,6 +28,7 @@ from app.config import get_settings
 from app.enums import Language
 from app.ingestion import DocumentMeta, delete_document, ingest_file, ingest_text
 from app.opensearch_store import ensure_setup
+from app.passages import DEFAULT_CONTEXT_CHARS, extract_passage
 from app.search import SearchFilters, SearchMode, get_document, search
 from app.users import upsert_user
 
@@ -196,6 +197,20 @@ SWAGGER_TEMPLATE = {
                 "chunks": {"type": "array", "items": {"type": "object"}},
             },
         },
+        "Passage": {
+            "type": "object",
+            "description": (
+                "A search hit with the text around it. hit_start/hit_end are "
+                "offsets into 'text', so the UI can highlight the hit in context."
+            ),
+            "properties": {
+                "document_id": {"type": "string", "format": "uuid"},
+                "version_number": {"type": "integer"},
+                "text": {"type": "string"},
+                "hit_start": {"type": "integer"},
+                "hit_end": {"type": "integer"},
+            },
+        },
         "SearchHit": {
             "type": "object",
             "properties": {
@@ -251,6 +266,19 @@ def _parse_dt(value: Any, field: str) -> datetime | None:
         return datetime.fromisoformat(value)
     except (ValueError, TypeError) as exc:
         raise ApiError(f"invalid {field}: {value!r} (expected ISO-8601)") from exc
+
+
+def _parse_int(value: Any, field: str, minimum: int | None = None) -> int:
+    """Parse a query parameter into an int or raise ApiError(400)."""
+    if value is None:
+        raise ApiError(f"'{field}' is required")
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError) as exc:
+        raise ApiError(f"invalid {field}: {value!r} (expected an integer)") from exc
+    if minimum is not None and parsed < minimum:
+        raise ApiError(f"'{field}' must be >= {minimum}")
+    return parsed
 
 
 def _parse_uuid(value: Any, field: str) -> uuid.UUID | None:
@@ -407,6 +435,82 @@ def create_app() -> Flask:
         if doc is None:
             raise ApiError(f"document {doc_id} not found", status=404)
         return jsonify(doc)
+
+    @app.get("/documents/<doc_id>/passage")
+    @require_auth
+    def get_passage_endpoint(doc_id: str):
+        """Fetch a search hit with the text surrounding it (for a detail view).
+
+        Pass the offsets a search hit returned (`version_number`, `start_char`,
+        `end_char`). `hit_start` / `hit_end` in the response locate the hit
+        inside the returned `text`, so the UI can highlight it in context.
+        ---
+        tags: [documents]
+        parameters:
+          - in: path
+            name: doc_id
+            required: true
+            type: string
+            format: uuid
+          - in: query
+            name: version
+            required: true
+            type: integer
+            description: version_number from the search hit
+          - in: query
+            name: start
+            required: true
+            type: integer
+            description: start_char from the search hit
+          - in: query
+            name: end
+            required: true
+            type: integer
+            description: end_char from the search hit
+          - in: query
+            name: context
+            required: false
+            type: integer
+            default: 200
+            description: characters of context on each side of the hit
+        responses:
+          200:
+            description: The hit in context
+            schema: {$ref: '#/definitions/Passage'}
+          400:
+            description: Validation error
+            schema: {$ref: '#/definitions/Error'}
+          401:
+            description: Missing or invalid bearer token
+            schema: {$ref: '#/definitions/Error'}
+          404:
+            description: Document version not found
+            schema: {$ref: '#/definitions/Error'}
+        """
+        document_id = _parse_uuid(doc_id, "document id")
+        version = _parse_int(request.args.get("version"), "version", minimum=1)
+        start = _parse_int(request.args.get("start"), "start", minimum=0)
+        end = _parse_int(request.args.get("end"), "end", minimum=0)
+        context = _parse_int(
+            request.args.get("context", DEFAULT_CONTEXT_CHARS), "context", minimum=0
+        )
+        if end < start:
+            raise ApiError("'end' must not be smaller than 'start'")
+
+        passage = extract_passage(document_id, version, start, end, context_chars=context)
+        if passage is None:
+            raise ApiError(
+                f"document {doc_id} has no version {version}", status=404
+            )
+        return jsonify(
+            {
+                "document_id": str(document_id),
+                "version_number": version,
+                "text": passage.text,
+                "hit_start": passage.hit_start,
+                "hit_end": passage.hit_end,
+            }
+        )
 
     @app.delete("/documents/<doc_id>")
     @require_auth
