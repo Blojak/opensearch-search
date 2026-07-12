@@ -14,18 +14,40 @@ basic validation and error handling.
 
 from __future__ import annotations
 
+import functools
 import uuid
 from datetime import datetime
 from typing import Any
 
 from flasgger import Swagger
-from flask import Flask, jsonify, request
+from flask import Flask, g, jsonify, request
 
+from app.auth import AuthError, bearer_token, decode_token
 from app.config import get_settings
 from app.enums import Language
 from app.ingestion import DocumentMeta, delete_document, ingest_file, ingest_text
 from app.opensearch_store import ensure_setup
 from app.search import SearchFilters, SearchMode, get_document, search
+from app.users import upsert_user
+
+
+def require_auth(view):
+    """Validate the bearer token and put the caller on the request context.
+
+    The thin Flask binding around ``app.auth``: it resolves the token to a
+    ``Principal``, projects it into the local ``users`` table (just-in-time) and
+    exposes both as ``g.principal`` / ``g.user_id``. Endpoints therefore never
+    take a user id from the client — it always comes from the token.
+    """
+
+    @functools.wraps(view)
+    def wrapper(*args, **kwargs):
+        principal = decode_token(bearer_token(request.headers.get("Authorization")))
+        g.principal = principal
+        g.user_id = upsert_user(principal)
+        return view(*args, **kwargs)
+
+    return wrapper
 
 # --- OpenAPI / Swagger definitions (served at /apidocs/) ---
 SWAGGER_TEMPLATE = {
@@ -258,6 +280,15 @@ def create_app() -> Flask:
     def _handle_api_error(err: ApiError):
         return jsonify({"error": err.message}), err.status
 
+    @app.errorhandler(AuthError)
+    def _handle_auth_error(err: AuthError):
+        response = jsonify({"error": err.message})
+        response.status_code = err.status
+        if err.status == 401:
+            # RFC 6750: tell the client how to authenticate.
+            response.headers["WWW-Authenticate"] = 'Bearer realm="opensearch-search"'
+        return response
+
     @app.get("/health")
     def health():
         """Liveness probe.
@@ -270,6 +301,7 @@ def create_app() -> Flask:
         return jsonify({"status": "ok"})
 
     @app.post("/documents")
+    @require_auth
     def post_documents():
         """Ingest a document into Postgres and index its chunks in OpenSearch.
         ---
@@ -318,6 +350,7 @@ def create_app() -> Flask:
         return jsonify(payload), (200 if result.deduplicated else 201)
 
     @app.get("/documents/<doc_id>")
+    @require_auth
     def get_document_endpoint(doc_id: str):
         """Fetch a document's metadata and ordered chunks.
         ---
@@ -346,6 +379,7 @@ def create_app() -> Flask:
         return jsonify(doc)
 
     @app.delete("/documents/<doc_id>")
+    @require_auth
     def delete_document_endpoint(doc_id: str):
         """Soft-delete a document and remove its chunks from OpenSearch.
         ---
@@ -372,6 +406,7 @@ def create_app() -> Flask:
         return jsonify({"deleted": True, "document_id": doc_id})
 
     @app.post("/search")
+    @require_auth
     def post_search():
         """Search the indexed chunks (lexical, semantic or hybrid).
         ---
