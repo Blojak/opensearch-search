@@ -93,6 +93,12 @@ class Document(Base):
     klassifizierung: Mapped[str] = mapped_column(String(32), nullable=False)
     s3_object_key: Mapped[str] = mapped_column(Text, nullable=False)
     mime_type: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    language: Mapped[str] = mapped_column(
+        String(16),
+        nullable=False,
+        server_default=text("'unknown'"),
+        doc="ISO-639-1 language code (auto-detected; controlled vocabulary)",
+    )
     created_by: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id"), nullable=False,
     )
