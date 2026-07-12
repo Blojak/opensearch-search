@@ -19,9 +19,10 @@ document that carries, side by side:
   `created_at`) → filtering
 
 The relational metadata schema — `documents`, `document_versions` (append-only,
-holds the `body_text`), `search_queries`, `query_notifications`, plus placeholder
-`users`/`verfahren` — lives in SQLAlchemy models (`app/models.py`) and is managed
-with Alembic migrations. Ingestion writes a `Document` and its first
+holds the `body_text`), `search_queries`, `query_notifications`, `users` (a local
+projection of the IdP identity) and a placeholder `verfahren` — lives in
+SQLAlchemy models (`app/models.py`) and is managed with Alembic migrations.
+Ingestion writes a `Document` and its first
 `DocumentVersion` to Postgres, then derives the OpenSearch chunks; a chunk's
 `_id` is `"{document_id}-v{version_number}-{chunk_index}"`. Deduplication is by
 `content_hash`. Highlighting is done natively by OpenSearch (`<em>` fragments).
@@ -49,13 +50,14 @@ score list is min-max normalized, then combined as a weighted arithmetic mean
 
 Python 3.13, OpenSearch 2.19 (kNN + hybrid search pipeline), opensearch-py,
 PostgreSQL 17 with SQLAlchemy 2.0 + Alembic (metadata store), sentence-transformers
-(`intfloat/multilingual-e5-large`), Flask, pydantic-settings. All open source.
-Infrastructure (OpenSearch, Dashboards, PostgreSQL, pgAdmin) via Docker Compose.
+(`intfloat/multilingual-e5-large`), Keycloak + Authlib (OIDC), Flask,
+pydantic-settings. All open source. Infrastructure (OpenSearch, Dashboards,
+PostgreSQL, pgAdmin, Keycloak) via Docker Compose.
 
 ## Setup
 
 ```bash
-# 1. Start infrastructure (OpenSearch, Dashboards, PostgreSQL, pgAdmin)
+# 1. Start infrastructure (OpenSearch, Dashboards, PostgreSQL, pgAdmin, Keycloak)
 docker compose up -d
 
 # 2. Python environment
@@ -125,14 +127,51 @@ The OpenSearch index and the hybrid search pipeline are created automatically on
 startup (idempotent). Interactive API docs (Swagger UI) are served at
 **http://localhost:5002/apidocs/**, the raw OpenAPI spec at `/apispec_1.json`.
 
+## Authentication
+
+Every endpoint except `/health` requires an OIDC bearer token. The API is a
+**resource server**: it never issues tokens, it only validates the ones the IdP
+signs (RS256, keys from the JWKS endpoint, `iss` and `aud` checked). Keycloak
+runs in Docker Compose as the local IdP, with the realm, the `osearch-api`
+client and a test user imported from `keycloak/realm-osearch.json`.
+
+Get a token (the direct grant is enabled for local development, so no UI is
+needed):
+
+```bash
+TOKEN=$(curl -s -X POST \
+  http://localhost:8080/realms/osearch/protocol/openid-connect/token \
+  -d client_id=osearch-api -d grant_type=password \
+  -d username=ermittler -d password=ermittler | jq -r .access_token)
+
+curl -s http://localhost:5002/search -H "Authorization: Bearer $TOKEN" ...
+```
+
+In the Swagger UI, use the **Authorize** button and paste `Bearer <token>`.
+
+**`created_by` is never sent by the client** — it is derived from the token, so a
+caller cannot attribute a document to somebody else. On the first authenticated
+request the user is projected into the local `users` table just-in-time, keyed by
+`(issuer, subject)` from the token; `email` and `orgeinheit` are refreshed from
+the claims on every request. The internal `users.id` stays a separate UUID from
+the IdP's `sub`, so the foreign keys survive an IdP migration.
+
+> **OIDC vs SAML.** The app speaks OIDC only. If the corporate IdP later turns
+> out to speak SAML, Keycloak brokers it upstream and still issues OIDC tokens
+> downstream — no application change.
+
+`OIDC_ISSUER` and `OIDC_AUDIENCE` are **required** settings with no defaults in
+code: a missing value (e.g. a misspelled key in a Kubernetes ConfigMap) fails at
+startup instead of silently trusting the wrong issuer.
+
 ## Example requests
 
 ### Ingest a document
 
-`created_by` (and the optional `verfahren_id`) must reference rows that already
-exist in Postgres. `users` / `verfahren` are owned by another bounded context and
-have no API, so for local testing seed a fixed user + verfahren (idempotent, uses
-the UUIDs below):
+The optional `verfahren_id` must reference a row that already exists in Postgres.
+`verfahren` is owned by another bounded context and has no API, so seed the fixed
+dev one (idempotent). Users need no seeding — they are created just-in-time from
+the token:
 
 ```bash
 python scripts/seed_dev.py
@@ -147,13 +186,13 @@ classifier using the police taxonomy.
 
 ```bash
 curl -s -X POST http://localhost:5002/documents \
+  -H "Authorization: Bearer $TOKEN" \
   -H 'Content-Type: application/json' \
   -d '{
     "aktenzeichen": "AZ-2026-0001",
     "verfahren_id": "111f3f39-54f7-435e-a4bf-47dc088c5e79",
     "klassifizierung": "VS-NfD",
     "s3_object_key": "documents/az-2026-0001/report.txt",
-    "created_by": "85709c0d-3a9b-4b72-9bd2-ebf672982868",
     "path": "sample_docs/report_en_2024.txt"
   }'
 ```
@@ -169,6 +208,7 @@ Pass `"content": "..."` instead of `"path"` to ingest raw text. Response
 
 ```bash
 curl -s -X POST http://localhost:5002/search \
+  -H "Authorization: Bearer $TOKEN" \
   -H 'Content-Type: application/json' \
   -d '{
     "query": "phishing attempts",
@@ -208,8 +248,11 @@ directly to show the matching terms. Semantic hits have no query terms, so their
 ### Fetch / delete a document
 
 ```bash
-curl -s http://localhost:5002/documents/<document_id>          # Postgres metadata + ordered chunks
-curl -s -X DELETE http://localhost:5002/documents/<document_id>  # soft-delete + drop chunks from OpenSearch
+curl -s http://localhost:5002/documents/<document_id> \
+  -H "Authorization: Bearer $TOKEN"          # Postgres metadata + ordered chunks
+
+curl -s -X DELETE http://localhost:5002/documents/<document_id> \
+  -H "Authorization: Bearer $TOKEN"          # soft-delete + drop chunks from OpenSearch
 ```
 
 `DELETE` sets `deleted_at` in Postgres (the row is kept for auditing) and removes

@@ -1,9 +1,14 @@
-"""Seed deterministic dev fixtures so local document ingest works.
+"""Seed the deterministic dev fixture that ingest needs.
 
-``users`` and ``verfahren`` are owned by another bounded context and have no
-API of their own. For local testing this inserts a fixed-UUID placeholder user
-and verfahren (idempotent — safe to re-run, e.g. after truncating the tables),
-using the same UUIDs as the README ingest example. Run from the project root::
+``verfahren`` is owned by another bounded context and has no API of its own, so
+a document referencing one needs the row to exist. This inserts a fixed-UUID
+placeholder verfahren (idempotent — safe to re-run, e.g. after truncating the
+tables), using the same UUID as the README ingest example.
+
+Users are **not** seeded any more: they are projected just-in-time from the IdP
+token on the first authenticated request (see ``app/users.py``).
+
+Run from the project root::
 
     python scripts/seed_dev.py
 """
@@ -18,20 +23,18 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from app.db import session_scope  # noqa: E402
-from app.models import User, Verfahren  # noqa: E402
+from app.models import Verfahren  # noqa: E402
 
-USER_ID = uuid.UUID("85709c0d-3a9b-4b72-9bd2-ebf672982868")
 VERFAHREN_ID = uuid.UUID("111f3f39-54f7-435e-a4bf-47dc088c5e79")
 
 
 def seed() -> None:
-    """Upsert the fixed dev user + verfahren (idempotent)."""
+    """Upsert the fixed dev verfahren (idempotent)."""
     with session_scope() as session:
-        session.merge(User(id=USER_ID, orgeinheit="K3"))
         session.merge(Verfahren(id=VERFAHREN_ID))
     print("Seeded dev fixtures:")
-    print(f"  created_by   (user):      {USER_ID}")
-    print(f"  verfahren_id (verfahren): {VERFAHREN_ID}")
+    print(f"  verfahren_id: {VERFAHREN_ID}")
+    print("  (users are created just-in-time from the IdP token)")
 
 
 if __name__ == "__main__":
