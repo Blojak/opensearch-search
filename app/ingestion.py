@@ -9,6 +9,9 @@ PostgreSQL owns the metadata and the full body text (``document_versions``);
 OpenSearch is the derived, rebuildable search index. A chunk's OpenSearch
 ``_id`` is ``"{document_id}-v{version_number}-{chunk_index}"``.
 
+The document language is auto-detected from the content unless the caller
+supplies it explicitly.
+
 Versioning of an existing document (v2, v3, ...) is out of scope here: it needs
 an explicit document reference from the caller. Re-ingesting identical content
 is deduplicated by ``content_hash``; any other ingest creates a new document at
@@ -29,6 +32,7 @@ from app.chunking import chunk_text
 from app.config import get_settings
 from app.db import session_scope
 from app.embedding import embed_passages
+from app.language import detect_language
 from app.models import Document, DocumentVersion, User, Verfahren
 from app.opensearch_store import (
     FIELD_AKTENZEICHEN,
@@ -53,7 +57,8 @@ class DocumentMeta:
     """Caller-supplied metadata for a document to ingest.
 
     All identity fields are supplied by the caller (later: a UI). ``created_by``
-    and ``verfahren_id`` must reference existing rows in Postgres.
+    and ``verfahren_id`` must reference existing rows in Postgres. ``language``
+    is optional: when omitted it is auto-detected from the content.
     """
 
     aktenzeichen: str
@@ -62,6 +67,7 @@ class DocumentMeta:
     created_by: uuid.UUID
     verfahren_id: uuid.UUID | None = None
     mime_type: str = "text/plain"
+    language: str | None = None  # ISO-639-1 code; auto-detected when omitted
 
 
 @dataclass
@@ -198,12 +204,16 @@ def ingest_text(content: str, meta: DocumentMeta) -> IngestResult:
         if not chunks:
             raise ValueError("no content to ingest (empty after chunking)")
 
+        # Caller-supplied language wins; otherwise detect it from the content.
+        language = meta.language or detect_language(content).value
+
         document = Document(
             aktenzeichen=meta.aktenzeichen,
             verfahren_id=meta.verfahren_id,
             klassifizierung=meta.klassifizierung,
             s3_object_key=meta.s3_object_key,
             mime_type=meta.mime_type,
+            language=language,
             created_by=meta.created_by,
             current_version=1,
         )
