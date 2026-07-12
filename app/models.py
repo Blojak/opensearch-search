@@ -29,18 +29,42 @@ from app.db import Base
 
 
 class User(Base):
-    """Placeholder for the ``users`` table owned by another bounded context.
+    """Local projection of an identity owned by the IdP.
 
-    Only the columns needed so the metadata models can reference a user via a
-    real foreign key are defined here; the full user schema lives elsewhere.
+    The identity itself lives in the identity provider; this table exists so the
+    metadata models can reference a user via a real foreign key and so claims we
+    need (email for notifications, orgeinheit) are available without calling the
+    IdP. Rows are upserted just-in-time from the token claims on each
+    authenticated request.
+
+    ``id`` stays an internal UUID on purpose: it is what every foreign key points
+    at, so it must never change. ``(issuer, subject)`` is the stable lookup key
+    from the token (OIDC guarantees ``sub`` is stable and never reassigned),
+    which keeps the references intact across an IdP migration. ``email`` is a
+    plain attribute, never an identifier: it is mutable and can be reassigned.
     """
 
     __tablename__ = "users"
+    __table_args__ = (
+        UniqueConstraint("issuer", "subject", name="uq_user_issuer_subject"),
+        UniqueConstraint("email", name="uq_user_email"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         primary_key=True,
         server_default=text("gen_random_uuid()"),
+    )
+    # Nullable: rows seeded before the IdP existed carry no token identity.
+    issuer: Mapped[str | None] = mapped_column(
+        String(255), nullable=True, doc="OIDC issuer (iss claim)",
+    )
+    subject: Mapped[str | None] = mapped_column(
+        String(255), nullable=True, doc="Stable IdP subject (sub claim)",
+    )
+    email: Mapped[str | None] = mapped_column(
+        String(255), nullable=True,
+        doc="Attribute, not an identifier; used for notifications",
     )
     orgeinheit: Mapped[str | None] = mapped_column(
         String(32), nullable=True, doc="Organizational unit (short code)",
@@ -50,7 +74,7 @@ class User(Base):
     )
 
     def __repr__(self) -> str:  # pragma: no cover - debug helper
-        return f"<User id={self.id}>"
+        return f"<User id={self.id} subject={self.subject!r}>"
 
 
 class Verfahren(Base):
