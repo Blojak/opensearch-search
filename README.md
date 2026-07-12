@@ -259,6 +259,29 @@ curl -s -X DELETE http://localhost:5002/documents/<document_id> \
 the document's chunks from OpenSearch, so it disappears from search while
 remaining on record.
 
+## Query logging
+
+Every search is recorded in `search_queries`: who searched, the verbatim query,
+a fingerprint of the normalized query, the applied filters (JSONB) and the number
+of hits. This is the data basis for later spotting that two people research the
+same thing (`query_notifications`).
+
+Two deliberate decisions:
+
+- **The hash covers the query text only, not the filters.** The filters are
+  stored beside it, so the matching rule can be tightened later ("same query
+  *and* same verfahren") without a migration. The reverse would not work — what
+  was never hashed cannot be recovered.
+- **Normalization is conservative**: lowercase, trim, collapse whitespace; word
+  order is preserved. So `"  SECURITY   Report "` and `"security report"` share a
+  hash, but `"Hauptstrasse Einbruch"` and `"Einbruch Hauptstrasse"` do not.
+  Sorting tokens would blur the line between *identical* and *similar* and
+  destroy the ability to measure how often exact repeats actually occur — which
+  is exactly what decides whether semantic similarity is needed at all.
+
+Recording is telemetry and **can never break a search**: a failure to write the
+row is logged and swallowed, the search still returns its results.
+
 ## Rebuilding the index (OpenSearch is derived)
 
 OpenSearch holds no data that cannot be reconstructed — Postgres is the source of

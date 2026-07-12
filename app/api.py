@@ -29,6 +29,7 @@ from app.enums import Language
 from app.ingestion import DocumentMeta, delete_document, ingest_file, ingest_text
 from app.opensearch_store import ensure_setup
 from app.passages import DEFAULT_CONTEXT_CHARS, extract_passage
+from app.query_log import log_search
 from app.search import SearchFilters, SearchMode, get_document, search
 from app.users import upsert_user
 
@@ -544,7 +545,7 @@ def create_app() -> Flask:
 
     @app.post("/search")
     @require_auth
-    def post_search():
+    def post_search(user_id: uuid.UUID):
         """Search the indexed chunks (lexical, semantic or hybrid).
         ---
         tags: [search]
@@ -604,6 +605,17 @@ def create_app() -> Flask:
             }
             for hit in hits
         ]
+
+        # Telemetry, deliberately after the search: it needs the result count,
+        # and a failure to record must never turn a working search into an error
+        # (log_search swallows and logs its own failures).
+        log_search(
+            user_id=user_id,
+            query_text=query,
+            filters=filters,
+            result_count=len(results),
+        )
+
         return jsonify(
             {
                 "query": query,
