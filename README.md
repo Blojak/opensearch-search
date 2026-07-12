@@ -15,8 +15,8 @@ document that carries, side by side:
 - `text` — analyzed → **BM25 lexical** search + highlighting
 - `embedding` — `knn_vector` (HNSW, cosine) → **semantic** search
 - document metadata mirrored from Postgres (`document_id`, `version_number`,
-  `aktenzeichen`, `verfahren_id`, `klassifizierung`, `mime_type`, `created_at`)
-  → filtering
+  `aktenzeichen`, `verfahren_id`, `klassifizierung`, `language`, `mime_type`,
+  `created_at`) → filtering
 
 The relational metadata schema — `documents`, `document_versions` (append-only,
 holds the `body_text`), `search_queries`, `query_notifications`, plus placeholder
@@ -141,6 +141,10 @@ python scripts/seed_dev.py
 `klassifizierung` is a free string for now — later it will be assigned by an ML
 classifier using the police taxonomy.
 
+`language` is **auto-detected** from the content at ingest (offline, via
+`langdetect`, mapped onto `de` / `en` / `fr` / `es` / `it`, falling back to
+`unknown`). Pass `"language": "de"` explicitly to override the detection.
+
 ```bash
 curl -s -X POST http://localhost:5002/documents \
   -H 'Content-Type: application/json' \
@@ -175,8 +179,8 @@ curl -s -X POST http://localhost:5002/search \
 ```
 
 `mode` is one of `lexical` | `semantic` | `hybrid` (default `hybrid`); the
-filters (`aktenzeichen`, `verfahren_id`, `klassifizierung`, `created_from` /
-`created_to`) are all optional. Response:
+filters (`aktenzeichen`, `verfahren_id`, `klassifizierung`, `language`,
+`created_from` / `created_to`) are all optional. Response:
 
 ```json
 {
