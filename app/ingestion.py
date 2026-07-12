@@ -38,6 +38,7 @@ from app.opensearch_store import (
     FIELD_EMBEDDING,
     FIELD_END_CHAR,
     FIELD_KLASSIFIZIERUNG,
+    FIELD_LANGUAGE,
     FIELD_MIME_TYPE,
     FIELD_START_CHAR,
     FIELD_TEXT,
@@ -129,6 +130,7 @@ def chunk_action(document: Document, version_number: int, chunk, vector) -> dict
                 str(document.verfahren_id) if document.verfahren_id else None
             ),
             FIELD_KLASSIFIZIERUNG: document.klassifizierung,
+            FIELD_LANGUAGE: document.language,
             FIELD_MIME_TYPE: document.mime_type,
             FIELD_CREATED_AT: document.created_at.isoformat(),
             FIELD_CHUNK_INDEX: chunk.index,

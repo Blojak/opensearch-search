@@ -35,6 +35,7 @@ FIELD_END_CHAR = "end_char"
 FIELD_AKTENZEICHEN = "aktenzeichen"
 FIELD_VERFAHREN_ID = "verfahren_id"
 FIELD_KLASSIFIZIERUNG = "klassifizierung"
+FIELD_LANGUAGE = "language"  # auto-detected at ingest (ISO-639-1 subset)
 FIELD_MIME_TYPE = "mime_type"
 FIELD_CREATED_AT = "created_at"  # documents.created_at
 
@@ -89,6 +90,7 @@ def _index_body() -> dict:
                 FIELD_AKTENZEICHEN: {"type": "keyword"},
                 FIELD_VERFAHREN_ID: {"type": "keyword"},
                 FIELD_KLASSIFIZIERUNG: {"type": "keyword"},
+                FIELD_LANGUAGE: {"type": "keyword"},
                 FIELD_MIME_TYPE: {"type": "keyword"},
                 FIELD_CREATED_AT: {"type": "date"},
             }
