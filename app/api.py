@@ -15,12 +15,13 @@ basic validation and error handling.
 from __future__ import annotations
 
 import functools
+import inspect
 import uuid
 from datetime import datetime
 from typing import Any
 
 from flasgger import Swagger
-from flask import Flask, g, jsonify, request
+from flask import Flask, jsonify, request
 
 from app.auth import AuthError, bearer_token, decode_token
 from app.config import get_settings
@@ -32,20 +33,34 @@ from app.users import upsert_user
 
 
 def require_auth(view):
-    """Validate the bearer token and put the caller on the request context.
+    """Authenticate the caller and inject the identity the view asks for.
 
-    The thin Flask binding around ``app.auth``: it resolves the token to a
-    ``Principal``, projects it into the local ``users`` table (just-in-time) and
-    exposes both as ``g.principal`` / ``g.user_id``. Endpoints therefore never
-    take a user id from the client — it always comes from the token.
+    The thin Flask binding around ``app.auth``: it resolves the bearer token to
+    a ``Principal`` and projects it into the local ``users`` table
+    (just-in-time). The view then receives ``user_id`` (the internal
+    ``users.id``) and/or ``principal`` — but only whichever it actually declares,
+    so every signature states exactly what it depends on. Endpoints never take a
+    user id from the client; it always comes from the token.
+
+    Deliberately without Flask's ``g``: ambient request state makes a view's
+    dependencies invisible in its signature, and it does not survive being
+    handed to a worker thread (``g`` is bound to a ``ContextVar`` that a plain
+    thread does not inherit) — which the notification worker will run into.
     """
+    wanted = set(inspect.signature(view).parameters) & {"user_id", "principal"}
 
     @functools.wraps(view)
     def wrapper(*args, **kwargs):
         principal = decode_token(bearer_token(request.headers.get("Authorization")))
-        g.principal = principal
-        g.user_id = upsert_user(principal)
-        return view(*args, **kwargs)
+        # Refresh the local projection on every authenticated request.
+        user_id = upsert_user(principal)
+
+        injected: dict[str, Any] = {}
+        if "user_id" in wanted:
+            injected["user_id"] = user_id
+        if "principal" in wanted:
+            injected["principal"] = principal
+        return view(*args, **injected, **kwargs)
 
     return wrapper
 
@@ -311,7 +326,7 @@ def create_app() -> Flask:
 
     @app.post("/documents")
     @require_auth
-    def post_documents():
+    def post_documents(user_id: uuid.UUID):
         """Ingest a document into Postgres and index its chunks in OpenSearch.
         ---
         tags: [documents]
@@ -338,7 +353,7 @@ def create_app() -> Flask:
         if not isinstance(body, dict):
             raise ApiError("request body must be a JSON object")
 
-        meta = _parse_meta(body, created_by=g.user_id)
+        meta = _parse_meta(body, created_by=user_id)
         path = body.get("path")
         content = body.get("content")
 
