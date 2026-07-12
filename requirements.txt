@@ -4,6 +4,9 @@ pydantic-settings==2.6.1
 Flask==3.1.0
 # OpenAPI/Swagger UI for the Flask API (bundles the UI locally, no CDN)
 flasgger==0.9.7.1
+# OIDC bearer-token validation (JWT/JWKS); the core is framework-agnostic
+Authlib==1.3.2
+requests==2.32.3
 
 # PostgreSQL (metadata store - source of truth)
 sqlalchemy==2.0.36

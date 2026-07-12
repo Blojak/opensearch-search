@@ -16,49 +16,13 @@ imported, because ``huggingface_hub`` reads ``HF_ENDPOINT`` at import time.
 from __future__ import annotations
 
 import os
-import ssl
 from functools import lru_cache
-from pathlib import Path
 
 from app.config import Settings, get_settings
-
-# Well-known system CA bundle locations, tried in order when neither the
-# settings nor the standard environment variables point at a bundle. Covers the
-# common Linux distributions plus Alpine/macOS.
-_SYSTEM_CA_CANDIDATES = (
-    "/etc/ssl/certs/ca-certificates.crt",  # Debian/Ubuntu
-    "/etc/pki/tls/certs/ca-bundle.crt",  # RHEL/CentOS/Fedora
-    "/etc/ssl/ca-bundle.pem",  # openSUSE
-    "/etc/ssl/cert.pem",  # Alpine/macOS
-)
-
-# Standard env vars the HTTP stack (requests/urllib) consults for a CA bundle.
-_CA_ENV_VARS = ("REQUESTS_CA_BUNDLE", "SSL_CERT_FILE", "CURL_CA_BUNDLE")
+from app.tls import configure_ca_env
 
 _QUERY_PREFIX = "query: "
 _PASSAGE_PREFIX = "passage: "
-
-
-def _resolve_ca_bundle(configured: str | None) -> str | None:
-    """Resolve the CA bundle to use for HTTPS, or ``None`` to keep the default.
-
-    Precedence: an explicitly configured path wins, then any already-set
-    standard environment variable, then the OpenSSL default verify paths, then
-    the well-known system locations.
-    """
-    if configured:
-        return configured
-    for var in _CA_ENV_VARS:
-        value = os.environ.get(var)
-        if value:
-            return value
-    default = ssl.get_default_verify_paths().cafile
-    if default and Path(default).is_file():
-        return default
-    for path in _SYSTEM_CA_CANDIDATES:
-        if Path(path).is_file():
-            return path
-    return None
 
 
 def _configure_hf_environment(settings: Settings) -> None:
@@ -74,13 +38,8 @@ def _configure_hf_environment(settings: Settings) -> None:
     if settings.hf_offline:
         os.environ["HF_HUB_OFFLINE"] = "1"
 
-    ca_bundle = _resolve_ca_bundle(settings.ca_bundle)
-    if ca_bundle:
-        for var in _CA_ENV_VARS:
-            # An explicit setting overrides; otherwise only fill in what is unset
-            # so a deliberately configured environment variable is preserved.
-            if settings.ca_bundle or var not in os.environ:
-                os.environ[var] = ca_bundle
+    # Trust the corporate CA for the Hub download (see app/tls.py).
+    configure_ca_env(settings.ca_bundle)
 
 
 # Configure the environment before importing sentence_transformers below.

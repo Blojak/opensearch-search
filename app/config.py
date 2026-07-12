@@ -69,6 +69,18 @@ class Settings(BaseSettings):
     hybrid_lexical_weight: float = 0.5
     hybrid_semantic_weight: float = 0.5
 
+    # --- OIDC (the API is a resource server: it validates bearer tokens) ---
+    # Deliberately WITHOUT defaults: these are environment-specific and security
+    # critical, so a missing OIDC_ISSUER / OIDC_AUDIENCE must fail loudly at
+    # startup (e.g. a misspelled key in a Kubernetes ConfigMap) instead of
+    # silently falling back to some local value. Set them via the environment;
+    # the local development values live in .env.
+    oidc_issuer: str
+    oidc_audience: str
+    # How long the JWKS is cached before it is refetched (seconds). A token
+    # signed with an unknown key id forces an immediate refetch regardless.
+    oidc_jwks_ttl: int = 300
+
     # --- Flask API ---
     api_host: str = "0.0.0.0"
     api_port: int = 5002
