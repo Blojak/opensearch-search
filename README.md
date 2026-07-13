@@ -282,6 +282,32 @@ Two deliberate decisions:
 Recording is telemetry and **can never break a search**: a failure to write the
 row is logged and swallowed, the search still returns its results.
 
+### Duplicate detection
+
+When a search matches one that **somebody else** already ran (same
+`query_hash`), both sides get an entry in `query_notifications` — so duplicate
+investigative work surfaces instead of staying invisible. Read your own with:
+
+```bash
+curl -s http://localhost:5002/notifications -H "Authorization: Bearer $TOKEN"
+```
+
+Each entry names the `counterpart`: who else is researching this, and in which
+`orgeinheit`. That is the whole point — knowing *whom* to talk to.
+
+Rules, deliberately:
+
+- **You never match yourself.** Repeating your own search is not a duplicate.
+- **A pair is reported once.** However often either side searches again, no
+  second notification is created for the same query and the same pair.
+- **No visibility gate yet.** Any two users match, regardless of orgeinheit.
+  *Who may be told about whom is a legal/organizational question and must be
+  settled before this goes anywhere near production.*
+- **Nothing is delivered.** Entries stay in `status = 'pending'`; email delivery
+  is a separate, later step.
+
+Like the logging, detection can never break a search.
+
 ## Rebuilding the index (OpenSearch is derived)
 
 OpenSearch holds no data that cannot be reconstructed — Postgres is the source of

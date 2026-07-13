@@ -28,6 +28,7 @@ from app.config import get_settings
 from app.enums import Language
 from app.ingestion import DocumentMeta, delete_document, ingest_file, ingest_text
 from app.opensearch_store import ensure_setup
+from app.duplicates import list_notifications, notify_duplicates
 from app.passages import DEFAULT_CONTEXT_CHARS, extract_passage
 from app.query_log import log_search
 from app.search import SearchFilters, SearchMode, get_document, search
@@ -83,6 +84,7 @@ SWAGGER_TEMPLATE = {
         {"name": "health"},
         {"name": "documents"},
         {"name": "search"},
+        {"name": "notifications"},
     ],
     # Swagger 2.0 has no native bearer type; an apiKey in the Authorization
     # header is the standard way to express it and gives the UI an Authorize
@@ -196,6 +198,28 @@ SWAGGER_TEMPLATE = {
                 "content_hash": {"type": "string"},
                 "num_chunks": {"type": "integer"},
                 "chunks": {"type": "array", "items": {"type": "object"}},
+            },
+        },
+        "Notification": {
+            "type": "object",
+            "description": (
+                "Somebody else searched the same thing. 'counterpart' is who "
+                "that was, so the two can talk to each other."
+            ),
+            "properties": {
+                "id": {"type": "string", "format": "uuid"},
+                "status": {"type": "string", "example": "pending"},
+                "created_at": {"type": "string", "format": "date-time"},
+                "query_text": {"type": "string"},
+                "searched_at": {"type": "string", "format": "date-time"},
+                "counterpart": {
+                    "type": "object",
+                    "properties": {
+                        "user_id": {"type": "string", "format": "uuid"},
+                        "email": {"type": "string"},
+                        "orgeinheit": {"type": "string"},
+                    },
+                },
             },
         },
         "Passage": {
@@ -543,6 +567,29 @@ def create_app() -> Flask:
             raise ApiError(f"document {doc_id} not found", status=404)
         return jsonify({"deleted": True, "document_id": doc_id})
 
+    @app.get("/notifications")
+    @require_auth
+    def get_notifications(user_id: uuid.UUID):
+        """Searches by other people that duplicate your own.
+
+        Created as a side effect of searching: when your query matches one
+        somebody else already ran, both sides get an entry. `counterpart` names
+        who else is researching this — that is the point of the feature.
+        Nothing is delivered by email yet; entries stay in status `pending`.
+        ---
+        tags: [notifications]
+        responses:
+          200:
+            description: Your notifications, newest first
+            schema:
+              type: array
+              items: {$ref: '#/definitions/Notification'}
+          401:
+            description: Missing or invalid bearer token
+            schema: {$ref: '#/definitions/Error'}
+        """
+        return jsonify(list_notifications(user_id))
+
     @app.post("/search")
     @require_auth
     def post_search(user_id: uuid.UUID):
@@ -608,13 +655,15 @@ def create_app() -> Flask:
 
         # Telemetry, deliberately after the search: it needs the result count,
         # and a failure to record must never turn a working search into an error
-        # (log_search swallows and logs its own failures).
-        log_search(
+        # (both calls swallow and log their own failures).
+        query_id = log_search(
             user_id=user_id,
             query_text=query,
             filters=filters,
             result_count=len(results),
         )
+        if query_id is not None:
+            notify_duplicates(query_id)
 
         return jsonify(
             {
