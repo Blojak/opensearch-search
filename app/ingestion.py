@@ -1,74 +1,84 @@
 """Ingestion pipeline.
 
-Flow: read text -> compute content hash (dedup) -> split into chunks -> embed
--> bulk-index one OpenSearch document per chunk, each carrying the chunk text,
-its embedding and the denormalized document metadata.
+Flow: compute the content hash (dedup) -> write the document and its first
+version to PostgreSQL (the source of truth) -> split into chunks -> embed ->
+bulk-index one OpenSearch document per chunk, each carrying the chunk text, its
+embedding and the denormalized metadata mirrored from Postgres.
 
-OpenSearch is the single store, so there is no separate metadata database. The
-sha256 content hash doubles as the document id; each chunk's OpenSearch ``_id``
-is ``"{doc_id}-{chunk_index}"`` so re-ingesting a document is idempotent.
+PostgreSQL owns the metadata and the full body text (``document_versions``);
+OpenSearch is the derived, rebuildable search index. A chunk's OpenSearch
+``_id`` is ``"{document_id}-v{version_number}-{chunk_index}"``.
+
+The document language is auto-detected from the content unless the caller
+supplies it explicitly.
+
+Versioning of an existing document (v2, v3, ...) is out of scope here: it needs
+an explicit document reference from the caller. Re-ingesting identical content
+is deduplicated by ``content_hash``; any other ingest creates a new document at
+version 1.
 """
 
 from __future__ import annotations
 
 import hashlib
-from dataclasses import dataclass, field
+import uuid
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 
 from opensearchpy.helpers import bulk
 
 from app.chunking import chunk_text
+from app.config import get_settings
+from app.db import session_scope
 from app.embedding import embed_passages
-from app.enums import Classification, DocType, Language
+from app.language import detect_language
+from app.models import Document, DocumentVersion, User, Verfahren
 from app.opensearch_store import (
-    FIELD_BODY,
+    FIELD_AKTENZEICHEN,
     FIELD_CHUNK_INDEX,
-    FIELD_CLASSIFICATION,
     FIELD_CREATED_AT,
-    FIELD_DOC_ID,
-    FIELD_DOC_TYPE,
+    FIELD_DOCUMENT_ID,
     FIELD_EMBEDDING,
     FIELD_END_CHAR,
-    FIELD_EXTRA,
-    FIELD_FILENAME,
-    FIELD_INGESTED_AT,
+    FIELD_KLASSIFIZIERUNG,
     FIELD_LANGUAGE,
     FIELD_MIME_TYPE,
-    FIELD_SIZE_BYTES,
-    FIELD_SOURCE,
     FIELD_START_CHAR,
     FIELD_TEXT,
-    FIELD_TITLE,
-    documents_index,
+    FIELD_VERFAHREN_ID,
+    FIELD_VERSION_NUMBER,
     get_client,
 )
-from app.config import get_settings
 
 
 @dataclass
 class DocumentMeta:
-    """Caller-supplied metadata for a document to ingest."""
+    """Caller-supplied metadata for a document to ingest.
 
-    filename: str
+    All identity fields are supplied by the caller (later: a UI). ``created_by``
+    and ``verfahren_id`` must reference existing rows in Postgres. ``language``
+    is optional: when omitted it is auto-detected from the content.
+    """
+
+    aktenzeichen: str
+    klassifizierung: str
+    s3_object_key: str
+    created_by: uuid.UUID
+    verfahren_id: uuid.UUID | None = None
     mime_type: str = "text/plain"
-    title: str | None = None
-    language: Language = Language.UNKNOWN
-    doc_type: DocType = DocType.OTHER
-    classification: Classification = Classification.INTERNAL
-    created_at: datetime | None = None
-    source: str | None = None
-    extra: dict = field(default_factory=dict)
+    language: str | None = None  # ISO-639-1 code; auto-detected when omitted
 
 
 @dataclass
 class IngestResult:
     """Outcome of an ingestion call."""
 
-    document_id: str  # sha256 content hash
-    filename: str
+    document_id: uuid.UUID
+    version_number: int
+    aktenzeichen: str
     num_chunks: int
-    deduplicated: bool  # True if the document already existed (by hash)
+    deduplicated: bool  # True if identical content already existed (by hash)
 
 
 def compute_hash(content: str) -> str:
@@ -93,125 +103,171 @@ def read_document_file(path: str | Path) -> tuple[str, str]:
     return path.read_text(encoding="utf-8"), "text/plain"
 
 
-def _count_chunks(client, doc_id: str) -> int:
-    """How many chunks of ``doc_id`` already exist in the index."""
+def _count_chunks(client, document_id: uuid.UUID, version_number: int) -> int:
+    """How many chunks of a document version already exist in the index."""
     settings = get_settings()
     resp = client.count(
         index=settings.opensearch_index,
-        body={"query": {"term": {FIELD_DOC_ID: doc_id}}},
+        body={
+            "query": {
+                "bool": {
+                    "must": [
+                        {"term": {FIELD_DOCUMENT_ID: str(document_id)}},
+                        {"term": {FIELD_VERSION_NUMBER: version_number}},
+                    ]
+                }
+            }
+        },
     )
     return int(resp["count"])
 
 
-def _base_metadata(meta: DocumentMeta, doc_id: str, size_bytes: int) -> dict:
-    """Denormalized document metadata copied onto every chunk document."""
-    data = {
-        FIELD_DOC_ID: doc_id,
-        FIELD_FILENAME: meta.filename,
-        FIELD_TITLE: meta.title,
-        FIELD_MIME_TYPE: meta.mime_type,
-        FIELD_SIZE_BYTES: size_bytes,
-        FIELD_LANGUAGE: meta.language.value,
-        FIELD_DOC_TYPE: meta.doc_type.value,
-        FIELD_CLASSIFICATION: meta.classification.value,
-        FIELD_SOURCE: meta.source,
-        FIELD_CREATED_AT: meta.created_at.isoformat() if meta.created_at else None,
-        FIELD_INGESTED_AT: datetime.now(timezone.utc).isoformat(),
-        FIELD_EXTRA: meta.extra or {},
+def chunk_action(document: Document, version_number: int, chunk, vector) -> dict:
+    """Build the OpenSearch bulk action for a single chunk of a document version."""
+    settings = get_settings()
+    return {
+        "_index": settings.opensearch_index,
+        "_id": f"{document.id}-v{version_number}-{chunk.index}",
+        "_source": {
+            FIELD_DOCUMENT_ID: str(document.id),
+            FIELD_VERSION_NUMBER: version_number,
+            FIELD_AKTENZEICHEN: document.aktenzeichen,
+            FIELD_VERFAHREN_ID: (
+                str(document.verfahren_id) if document.verfahren_id else None
+            ),
+            FIELD_KLASSIFIZIERUNG: document.klassifizierung,
+            FIELD_LANGUAGE: document.language,
+            FIELD_MIME_TYPE: document.mime_type,
+            FIELD_CREATED_AT: document.created_at.isoformat(),
+            FIELD_CHUNK_INDEX: chunk.index,
+            FIELD_START_CHAR: chunk.start_char,
+            FIELD_END_CHAR: chunk.end_char,
+            FIELD_TEXT: chunk.text,
+            FIELD_EMBEDDING: vector,
+        },
     }
-    return data
+
+
+def index_chunks(
+    client,
+    document: Document,
+    version_number: int,
+    chunks,
+    vectors,
+    refresh: bool = True,
+) -> None:
+    """Index one OpenSearch document per chunk of a document version.
+
+    ``refresh=True`` makes the document immediately searchable (right for a
+    single ingest); bulk rebuilds pass ``refresh=False`` and refresh once at the
+    end.
+    """
+    actions = [
+        chunk_action(document, version_number, c, vector)
+        for c, vector in zip(chunks, vectors)
+    ]
+    bulk(client, actions, refresh=refresh)
 
 
 def ingest_text(content: str, meta: DocumentMeta) -> IngestResult:
-    """Ingest raw text under the given metadata.
+    """Ingest raw text: persist it in Postgres, then index its chunks.
 
-    Deduplicates by content hash: if a document with the same hash already has
-    chunks in the index, nothing is written and the existing document is
-    returned.
+    Deduplicates by content hash: if a document version with the same hash
+    already exists, nothing is written and that document is returned.
     """
-    settings = get_settings()
     client = get_client()
-    doc_id = compute_hash(content)
+    content_hash = compute_hash(content)
 
-    existing = _count_chunks(client, doc_id)
-    if existing:
+    with session_scope() as session:
+        existing = (
+            session.query(DocumentVersion)
+            .filter(DocumentVersion.content_hash == content_hash)
+            .first()
+        )
+        if existing is not None:
+            return IngestResult(
+                document_id=existing.document_id,
+                version_number=existing.version_number,
+                aktenzeichen=existing.document.aktenzeichen,
+                num_chunks=_count_chunks(
+                    client, existing.document_id, existing.version_number
+                ),
+                deduplicated=True,
+            )
+
+        if session.get(User, meta.created_by) is None:
+            raise ValueError(f"created_by user {meta.created_by} does not exist")
+        if meta.verfahren_id is not None and session.get(Verfahren, meta.verfahren_id) is None:
+            raise ValueError(f"verfahren {meta.verfahren_id} does not exist")
+
+        chunks = chunk_text(content)
+        if not chunks:
+            raise ValueError("no content to ingest (empty after chunking)")
+
+        # Caller-supplied language wins; otherwise detect it from the content.
+        language = meta.language or detect_language(content).value
+
+        document = Document(
+            aktenzeichen=meta.aktenzeichen,
+            verfahren_id=meta.verfahren_id,
+            klassifizierung=meta.klassifizierung,
+            s3_object_key=meta.s3_object_key,
+            mime_type=meta.mime_type,
+            language=language,
+            created_by=meta.created_by,
+            current_version=1,
+        )
+        session.add(document)
+        session.flush()  # populate server-side defaults (id, created_at)
+        session.refresh(document)
+
+        version = DocumentVersion(
+            document_id=document.id,
+            version_number=1,
+            body_text=content,
+            content_hash=content_hash,
+            created_by=meta.created_by,
+        )
+        session.add(version)
+
+        vectors = embed_passages([c.text for c in chunks])
+        index_chunks(client, document, version_number=1, chunks=chunks, vectors=vectors)
+
         return IngestResult(
-            document_id=doc_id,
-            filename=meta.filename,
-            num_chunks=existing,
-            deduplicated=True,
+            document_id=document.id,
+            version_number=1,
+            aktenzeichen=document.aktenzeichen,
+            num_chunks=len(chunks),
+            deduplicated=False,
         )
 
-    chunks = chunk_text(content)
-    if not chunks:
-        raise ValueError("no content to ingest (empty after chunking)")
 
-    vectors = embed_passages([c.text for c in chunks])
-    base = _base_metadata(meta, doc_id, size_bytes=len(content.encode("utf-8")))
-
-    actions = [
-        {
-            "_index": settings.opensearch_index,
-            "_id": f"{doc_id}-{c.index}",
-            "_source": {
-                **base,
-                FIELD_CHUNK_INDEX: c.index,
-                FIELD_START_CHAR: c.start_char,
-                FIELD_END_CHAR: c.end_char,
-                FIELD_TEXT: c.text,
-                FIELD_EMBEDDING: vector,
-            },
-        }
-        for c, vector in zip(chunks, vectors)
-    ]
-    # refresh=True so the freshly ingested document is immediately searchable
-    # (convenient for a PoC; drop for high-throughput bulk loads).
-    bulk(client, actions, refresh=True)
-
-    # Store the full original text once, keyed by doc_id, as the source for
-    # passage extraction (see app.passages.extract_passage).
-    client.index(
-        index=documents_index(),
-        id=doc_id,
-        body={FIELD_BODY: content},
-        refresh=True,
-    )
-
-    return IngestResult(
-        document_id=doc_id,
-        filename=meta.filename,
-        num_chunks=len(chunks),
-        deduplicated=False,
-    )
-
-
-def ingest_file(path: str | Path, meta: DocumentMeta | None = None) -> IngestResult:
-    """Read a file from disk and ingest it. If ``meta`` is omitted, sensible
-    defaults are derived from the filename."""
+def ingest_file(path: str | Path, meta: DocumentMeta) -> IngestResult:
+    """Read a file from disk and ingest it, deriving the mime type from it."""
     path = Path(path)
     text, mime_type = read_document_file(path)
-    if meta is None:
-        meta = DocumentMeta(filename=path.name, mime_type=mime_type)
-    else:
-        meta.mime_type = mime_type
+    meta.mime_type = mime_type
     return ingest_text(text, meta)
 
 
-def delete_document(doc_id: str) -> bool:
-    """Delete all chunks of a document. Returns ``True`` if anything was
-    removed, ``False`` if no document with that id exists."""
+def delete_document(document_id: uuid.UUID) -> bool:
+    """Soft-delete a document in Postgres and remove its chunks from OpenSearch.
+
+    Returns ``True`` if a live document was deleted, ``False`` if none with that
+    id exists or it was already deleted.
+    """
     settings = get_settings()
     client = get_client()
-    if not _count_chunks(client, doc_id):
-        return False
-    client.delete_by_query(
-        index=settings.opensearch_index,
-        body={"query": {"term": {FIELD_DOC_ID: doc_id}}},
-        refresh=True,
-    )
-    # Drop the stored body too (ignore 404: documents ingested before the body
-    # index existed have no entry).
-    client.delete(
-        index=documents_index(), id=doc_id, refresh=True, ignore=[404]
-    )
-    return True
+
+    with session_scope() as session:
+        document = session.get(Document, document_id)
+        if document is None or document.deleted_at is not None:
+            return False
+        document.deleted_at = datetime.now(timezone.utc)
+
+        client.delete_by_query(
+            index=settings.opensearch_index,
+            body={"query": {"term": {FIELD_DOCUMENT_ID: str(document_id)}}},
+            refresh=True,
+        )
+        return True

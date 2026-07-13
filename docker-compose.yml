@@ -47,5 +47,84 @@ services:
       opensearch:
         condition: service_healthy
 
+  # ---------------------------------------------------------------------------
+  # PostgreSQL: source of truth for document metadata (the OpenSearch index is
+  # a derived, rebuildable search index on top of this).
+  # ---------------------------------------------------------------------------
+  postgres:
+    image: postgres:17
+    container_name: osearch_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-osearch}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-osearch}
+      POSTGRES_DB: ${POSTGRES_DB:-osearch}
+    ports:
+      - "${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-osearch} -d ${POSTGRES_DB:-osearch}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Web UI to inspect the metadata database / run SQL.
+  pgadmin:
+    image: dpage/pgadmin4:8.14
+    container_name: osearch_pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@example.com}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-admin}
+      # Skip the login screen's master-password prompt for a local PoC.
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: "False"
+    ports:
+      - "${PGADMIN_PORT:-5050}:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+      # Pre-register the Postgres connection (reachable as host "postgres"
+      # on the internal network, port 5432).
+      - ./pgadmin/servers.json:/pgadmin4/servers.json:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # ---------------------------------------------------------------------------
+  # Keycloak: OIDC identity provider. The API is a resource server and only
+  # validates the bearer tokens Keycloak issues (JWKS). If the corporate IdP
+  # later speaks SAML, Keycloak can broker it upstream without the app changing.
+  # ---------------------------------------------------------------------------
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0
+    container_name: osearch_keycloak
+    restart: unless-stopped
+    # start-dev: embedded H2, no TLS - local development only.
+    command: ["start-dev", "--import-realm"]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN:-admin}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
+      # Expose /health/ready on the management port (9000) for the healthcheck.
+      KC_HEALTH_ENABLED: "true"
+    ports:
+      - "${KEYCLOAK_PORT:-8080}:8080"
+    volumes:
+      - keycloak_data:/opt/keycloak/data
+      # Realm with the API client and a test user, imported on first start.
+      - ./keycloak/realm-osearch.json:/opt/keycloak/data/import/realm-osearch.json:ro
+    healthcheck:
+      # The image ships no curl/wget, so probe the management port via bash.
+      test:
+        [
+          "CMD-SHELL",
+          "exec 3<>/dev/tcp/localhost/9000 && printf 'GET /health/ready HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && grep -q '\"status\": \"UP\"' <&3",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
 volumes:
   opensearch_data:
+  postgres_data:
+  pgadmin_data:
+  keycloak_data:
