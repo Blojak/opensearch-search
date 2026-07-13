@@ -77,6 +77,24 @@
           "temporary": false
         }
       ]
+    },
+    {
+      "username": "ermittler2",
+      "enabled": true,
+      "emailVerified": true,
+      "email": "zweiter@behoerde.example",
+      "firstName": "Max",
+      "lastName": "Zweitermittler",
+      "attributes": {
+        "orgeinheit": ["K5"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "ermittler2",
+          "temporary": false
+        }
+      ]
     }
   ]
 }
