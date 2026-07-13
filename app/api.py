@@ -26,7 +26,14 @@ from flask import Flask, jsonify, request
 from app.auth import AuthError, bearer_token, decode_token
 from app.config import get_settings
 from app.enums import Language
-from app.ingestion import DocumentMeta, delete_document, ingest_file, ingest_text
+from app.ingestion import (
+    DocumentMeta,
+    add_version,
+    delete_document,
+    ingest_file,
+    ingest_text,
+    read_document_file,
+)
 from app.opensearch_store import ensure_setup
 from app.duplicates import list_notifications, notify_duplicates
 from app.passages import DEFAULT_CONTEXT_CHARS, extract_passage
@@ -140,6 +147,35 @@ SWAGGER_TEMPLATE = {
                 "path": {
                     "type": "string",
                     "description": "Server-side file path. Provide either content or path.",
+                },
+            },
+        },
+        "NewVersionRequest": {
+            "type": "object",
+            "required": ["change_reason"],
+            "properties": {
+                "change_reason": {
+                    "type": "string",
+                    "description": (
+                        "REQUIRED. Why is the document changing? The append-only "
+                        "history is worthless without it — a UI must ask for this."
+                    ),
+                    "example": "Scan der Seite 3 nachgetragen",
+                },
+                "content": {
+                    "type": "string",
+                    "description": "The corrected text. Provide either content or path.",
+                },
+                "path": {
+                    "type": "string",
+                    "description": "Server-side file path. Provide either content or path.",
+                },
+                "language": {
+                    "type": "string",
+                    "enum": [member.value for member in Language],
+                    "description": (
+                        "Optional. Re-detected from the new content when omitted."
+                    ),
                 },
             },
         },
@@ -460,6 +496,87 @@ def create_app() -> Flask:
         if doc is None:
             raise ApiError(f"document {doc_id} not found", status=404)
         return jsonify(doc)
+
+    @app.post("/documents/<doc_id>/versions")
+    @require_auth
+    def post_version(doc_id: str, user_id: uuid.UUID):
+        """Append a corrected version of an existing document.
+
+        The old body is never overwritten: a new version is appended and becomes
+        the current one. The previous version stays in Postgres as the audit
+        trail, but its chunks leave the index — a search only ever finds the
+        current version, so a corrected document is not found twice.
+
+        `change_reason` is **required**: an append-only history is worthless if
+        nobody recorded why something changed.
+        ---
+        tags: [documents]
+        parameters:
+          - in: path
+            name: doc_id
+            required: true
+            type: string
+            format: uuid
+          - in: body
+            name: body
+            required: true
+            schema: {$ref: '#/definitions/NewVersionRequest'}
+        responses:
+          201:
+            description: New version created
+            schema: {$ref: '#/definitions/IngestResult'}
+          200:
+            description: 'Unchanged: the content is already the current version'
+            schema: {$ref: '#/definitions/IngestResult'}
+          400:
+            description: Validation error
+            schema: {$ref: '#/definitions/Error'}
+          401:
+            description: Missing or invalid bearer token
+            schema: {$ref: '#/definitions/Error'}
+          404:
+            description: Document not found
+            schema: {$ref: '#/definitions/Error'}
+        """
+        document_id = _parse_uuid(doc_id, "document id")
+        body = request.get_json(silent=True)
+        if not isinstance(body, dict):
+            raise ApiError("request body must be a JSON object")
+
+        change_reason = body.get("change_reason")
+        if not change_reason or not isinstance(change_reason, str):
+            raise ApiError("'change_reason' is required (why is this changing?)")
+
+        language = _parse_enum(Language, body.get("language"), "language")
+        path = body.get("path")
+        content = body.get("content")
+
+        if path:
+            content, _ = read_document_file(path)
+        elif not content:
+            raise ApiError("provide either 'content' or 'path'")
+
+        try:
+            result = add_version(
+                document_id=document_id,
+                content=content,
+                change_reason=change_reason,
+                created_by=user_id,
+                language=language.value if language else None,
+            )
+        except ValueError as exc:
+            # The document not existing is a 404; anything else is a bad request.
+            status = 404 if "does not exist" in str(exc) else 400
+            raise ApiError(str(exc), status=status) from exc
+
+        payload = {
+            "document_id": str(result.document_id),
+            "version_number": result.version_number,
+            "aktenzeichen": result.aktenzeichen,
+            "num_chunks": result.num_chunks,
+            "deduplicated": result.deduplicated,
+        }
+        return jsonify(payload), (200 if result.deduplicated else 201)
 
     @app.get("/documents/<doc_id>/passage")
     @require_auth

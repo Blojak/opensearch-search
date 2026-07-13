@@ -137,6 +137,24 @@ def ensure_index(client: OpenSearch | None = None) -> None:
         )
 
 
+def delete_document_chunks(
+    client: OpenSearch,
+    document_id,
+    refresh: bool = True,
+) -> None:
+    """Remove every chunk of a document from the index, whatever its version.
+
+    Used before re-indexing a document and when deleting it. Only the current
+    version is ever indexed, so this clears the way for the new one.
+    """
+    settings = get_settings()
+    client.delete_by_query(
+        index=settings.opensearch_index,
+        body={"query": {"term": {FIELD_DOCUMENT_ID: str(document_id)}}},
+        refresh=refresh,
+    )
+
+
 def recreate_index(client: OpenSearch | None = None) -> None:
     """Drop and recreate the chunks index (used when rebuilding from Postgres)."""
     settings = get_settings()
