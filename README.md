@@ -1,5 +1,7 @@
 # opensearch-search — lexical + semantic document search (PoC)
 
+*(Deutsche Fassung: [README.de.md](README.de.md))*
+
 Proof of concept for **lexical (BM25), semantic (kNN) and hybrid** search over a
 document collection, with **native highlighting** of the matching terms.
 Documents are split into chunks, embedded locally with a multilingual model, and
@@ -30,9 +32,9 @@ Ingestion writes a `Document` and its first
 > **Status:** PostgreSQL is the source of truth end to end — ingestion, search,
 > fetch and (soft-)delete all go through it, and the OpenSearch index is derived
 > and can be rebuilt from Postgres with `python -m app.reindex` (see
-> [Rebuilding the index](#rebuilding-the-index-opensearch-is-derived)).
-> `search_queries` / `query_notifications` are schema-only so far (query logging
-> and duplicate notifications are a later feature).
+> [Rebuilding the index](#rebuilding-the-index-opensearch-is-derived)). Searches
+> are logged and duplicates across users are detected; notification **delivery**
+> (email) is still open, as is creating a *new version* of an existing document.
 
 ### Search modes
 
@@ -389,6 +391,8 @@ the hybrid weights.
 
 ## Scope
 
-Deliberately excluded (PoC): authentication, frontend, reranking, full
-extraction pipeline (only `.txt` and simple `.pdf` text), TLS/security plugin,
-and embedding models inside the cluster (embeddings are computed app-side).
+Deliberately excluded (PoC): frontend, reranking, a full extraction pipeline
+(only `.txt` and simple `.pdf` text), TLS/security plugin, and embedding models
+inside the cluster (embeddings are computed app-side). Authentication **is**
+implemented (OIDC); authorization is not — every valid token may do everything,
+roles/scopes are a later step.
