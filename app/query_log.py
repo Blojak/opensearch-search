@@ -24,8 +24,8 @@ import logging
 import uuid
 
 from app.db import session_scope
+from app.filters import SearchFilters
 from app.models import SearchQuery
-from app.search import SearchFilters
 
 logger = logging.getLogger(__name__)
 

@@ -65,7 +65,8 @@ docker compose up -d
 # 2. Python environment
 python -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt
+pip install -r requirements-dev.txt   # runtime + tests
+# (the container image installs only requirements.txt)
 
 # 3. Configuration
 cp .env.example .env        # adjust if needed (ports, model, weights, ...)
@@ -128,6 +129,25 @@ python -m app.api          # serves on http://localhost:5002 (API_PORT)
 The OpenSearch index and the hybrid search pipeline are created automatically on
 startup (idempotent). Interactive API docs (Swagger UI) are served at
 **http://localhost:5002/apidocs/**, the raw OpenAPI spec at `/apispec_1.json`.
+
+## Tests
+
+```bash
+pip install -r requirements-dev.txt
+pytest
+```
+
+Test dependencies live in `requirements-dev.txt`, not `requirements.txt` — the
+runtime image installs only the latter, so pytest never ends up in a production
+container.
+
+The suite covers the pure logic — no Postgres, OpenSearch or Keycloak needed, so
+it runs in well under a second. It deliberately pins the *decisions* rather than
+the implementation: that a chunk's offsets slice back to its exact text (the UI
+highlights hits with them), that the query fingerprint ignores case and
+whitespace but **not** word order, that a passage's `hit_start`/`hit_end` are
+offsets into the returned window, and that undetectable text becomes `unknown`
+instead of raising.
 
 ## Authentication
 

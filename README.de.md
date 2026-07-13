@@ -68,7 +68,8 @@ docker compose up -d
 # 2. Python-Umgebung
 python -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt
+pip install -r requirements-dev.txt   # Laufzeit + Tests
+# (das Container-Image installiert nur requirements.txt)
 
 # 3. Konfiguration
 cp .env.example .env        # bei Bedarf anpassen (Ports, Modell, Gewichte, ...)
@@ -131,6 +132,26 @@ Der OpenSearch-Index und die hybride Search-Pipeline werden beim Start
 automatisch angelegt (idempotent). Die interaktive API-Doku (Swagger UI) liegt
 auf **http://localhost:5002/apidocs/**, die rohe OpenAPI-Spec auf
 `/apispec_1.json`.
+
+## Tests
+
+```bash
+pip install -r requirements-dev.txt
+pytest
+```
+
+Die Test-Abhängigkeiten liegen in `requirements-dev.txt`, **nicht** in
+`requirements.txt` — das Laufzeit-Image installiert nur letztere, damit pytest
+nie in einem Produktiv-Container landet.
+
+Die Suite deckt die reine Logik ab — **ohne** Postgres, OpenSearch oder Keycloak,
+sie läuft daher in deutlich unter einer Sekunde. Sie nagelt bewusst die
+**Entscheidungen** fest, nicht die Implementierung: dass die Offsets eines Chunks
+exakt auf seinen Text zurückschneiden (die UI hebt Treffer damit hervor), dass
+der Query-Fingerabdruck Groß-/Kleinschreibung und Leerzeichen ignoriert, die
+**Wortreihenfolge aber nicht**, dass `hit_start`/`hit_end` einer Passage Offsets
+**ins zurückgegebene Fenster** sind (nicht ins Dokument), und dass nicht
+erkennbarer Text zu `unknown` wird, statt zu werfen.
 
 ## Authentifizierung
 
