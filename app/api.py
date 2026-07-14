@@ -1,15 +1,18 @@
 """Flask API: document ingestion and lexical / semantic / hybrid search.
 
 Endpoints:
-    GET    /health              liveness probe
-    POST   /documents           ingest a document (raw text or server-side path)
-    GET    /documents/<id>      fetch a document's metadata + ordered chunks
-    DELETE /documents/<id>      soft-delete a document and drop it from OpenSearch
-    POST   /search              search with a selectable mode + optional filters
+    GET    /health                      liveness probe (the only open one)
+    POST   /documents                   ingest a document (raw text or a path)
+    GET    /documents/<id>              metadata + ordered chunks
+    DELETE /documents/<id>              soft-delete + drop it from OpenSearch
+    POST   /documents/<id>/versions     append a corrected version
+    GET    /documents/<id>/passage      a search hit with the text around it
+    POST   /search                      search with a mode + optional filters
+    GET    /notifications               who else searched the same thing
 
-PostgreSQL is the source of truth; the document id is its UUID. Interactive API
-docs (Swagger UI) are served at ``/apidocs/``. Slim JSON in / JSON out with
-basic validation and error handling.
+PostgreSQL is the source of truth; the document id is its UUID. The OpenAPI
+description lives in ``app.openapi`` and is served at ``/apidocs/``. Slim JSON in
+/ JSON out with basic validation and error handling.
 """
 
 from __future__ import annotations
@@ -25,10 +28,18 @@ from flask import Flask, jsonify, request
 
 from app.auth import AuthError, bearer_token, decode_token
 from app.config import get_settings
-from app.enums import Language
-from app.ingestion import DocumentMeta, delete_document, ingest_file, ingest_text
-from app.opensearch_store import ensure_setup
 from app.duplicates import list_notifications, notify_duplicates
+from app.enums import Language
+from app.ingestion import (
+    DocumentMeta,
+    add_version,
+    delete_document,
+    ingest_file,
+    ingest_text,
+    read_document_file,
+)
+from app.openapi import SWAGGER_TEMPLATE
+from app.opensearch_store import ensure_setup
 from app.passages import DEFAULT_CONTEXT_CHARS, extract_passage
 from app.query_log import log_search
 from app.search import SearchFilters, SearchMode, get_document, search
@@ -66,201 +77,6 @@ def require_auth(view):
         return view(*args, **injected, **kwargs)
 
     return wrapper
-
-# --- OpenAPI / Swagger definitions (served at /apidocs/) ---
-SWAGGER_TEMPLATE = {
-    "swagger": "2.0",
-    "info": {
-        "title": "opensearch-search API",
-        "description": (
-            "Document ingestion (PostgreSQL = source of truth) and "
-            "lexical / semantic / hybrid search over the derived OpenSearch index."
-        ),
-        "version": "1.0.0",
-    },
-    "consumes": ["application/json"],
-    "produces": ["application/json"],
-    "tags": [
-        {"name": "health"},
-        {"name": "documents"},
-        {"name": "search"},
-        {"name": "notifications"},
-    ],
-    # Swagger 2.0 has no native bearer type; an apiKey in the Authorization
-    # header is the standard way to express it and gives the UI an Authorize
-    # button. Applied to every operation except /health (see its docstring).
-    "securityDefinitions": {
-        "bearerAuth": {
-            "type": "apiKey",
-            "name": "Authorization",
-            "in": "header",
-            "description": "OIDC access token, sent as 'Bearer <jwt>'.",
-        }
-    },
-    "security": [{"bearerAuth": []}],
-    "definitions": {
-        "Error": {
-            "type": "object",
-            "properties": {"error": {"type": "string"}},
-        },
-        "IngestRequest": {
-            "type": "object",
-            "required": ["aktenzeichen", "klassifizierung", "s3_object_key"],
-            "properties": {
-                "aktenzeichen": {"type": "string", "example": "AZ-2026-0001"},
-                "verfahren_id": {
-                    "type": "string",
-                    "format": "uuid",
-                    "description": "Optional; must reference an existing verfahren.",
-                },
-                "klassifizierung": {
-                    "type": "string",
-                    "description": (
-                        "Free string for now; later assigned by an ML classifier "
-                        "using the police taxonomy."
-                    ),
-                    "example": "VS-NfD",
-                },
-                "s3_object_key": {
-                    "type": "string",
-                    "example": "documents/az-2026-0001/original.pdf",
-                },
-                "language": {
-                    "type": "string",
-                    "enum": [member.value for member in Language],
-                    "description": (
-                        "Optional. Auto-detected from the content when omitted; "
-                        "supplying it overrides the detection."
-                    ),
-                },
-                "content": {
-                    "type": "string",
-                    "description": "Raw text to ingest. Provide either content or path.",
-                },
-                "path": {
-                    "type": "string",
-                    "description": "Server-side file path. Provide either content or path.",
-                },
-            },
-        },
-        "IngestResult": {
-            "type": "object",
-            "properties": {
-                "document_id": {"type": "string", "format": "uuid"},
-                "version_number": {"type": "integer"},
-                "aktenzeichen": {"type": "string"},
-                "num_chunks": {"type": "integer"},
-                "deduplicated": {"type": "boolean"},
-            },
-        },
-        "SearchFilters": {
-            "type": "object",
-            "properties": {
-                "aktenzeichen": {"type": "string"},
-                "verfahren_id": {"type": "string", "format": "uuid"},
-                "klassifizierung": {"type": "string"},
-                "language": {
-                    "type": "string",
-                    "enum": [member.value for member in Language],
-                },
-                "created_from": {"type": "string", "format": "date-time"},
-                "created_to": {"type": "string", "format": "date-time"},
-            },
-        },
-        "SearchRequest": {
-            "type": "object",
-            "required": ["query"],
-            "properties": {
-                "query": {"type": "string", "example": "phishing attempts"},
-                "mode": {
-                    "type": "string",
-                    "enum": ["lexical", "semantic", "hybrid"],
-                    "default": "hybrid",
-                },
-                "limit": {"type": "integer", "default": 10},
-                "filters": {"$ref": "#/definitions/SearchFilters"},
-            },
-        },
-        "Document": {
-            "type": "object",
-            "properties": {
-                "id": {"type": "string", "format": "uuid"},
-                "aktenzeichen": {"type": "string"},
-                "verfahren_id": {"type": "string", "format": "uuid"},
-                "klassifizierung": {"type": "string"},
-                "s3_object_key": {"type": "string"},
-                "mime_type": {"type": "string"},
-                "language": {"type": "string"},
-                "created_by": {"type": "string", "format": "uuid"},
-                "created_at": {"type": "string", "format": "date-time"},
-                "current_version": {"type": "integer"},
-                "deleted_at": {"type": "string", "format": "date-time"},
-                "content_hash": {"type": "string"},
-                "num_chunks": {"type": "integer"},
-                "chunks": {"type": "array", "items": {"type": "object"}},
-            },
-        },
-        "Notification": {
-            "type": "object",
-            "description": (
-                "Somebody else searched the same thing. 'counterpart' is who "
-                "that was, so the two can talk to each other."
-            ),
-            "properties": {
-                "id": {"type": "string", "format": "uuid"},
-                "status": {"type": "string", "example": "pending"},
-                "created_at": {"type": "string", "format": "date-time"},
-                "query_text": {"type": "string"},
-                "searched_at": {"type": "string", "format": "date-time"},
-                "counterpart": {
-                    "type": "object",
-                    "properties": {
-                        "user_id": {"type": "string", "format": "uuid"},
-                        "email": {"type": "string"},
-                        "orgeinheit": {"type": "string"},
-                    },
-                },
-            },
-        },
-        "Passage": {
-            "type": "object",
-            "description": (
-                "A search hit with the text around it. hit_start/hit_end are "
-                "offsets into 'text', so the UI can highlight the hit in context."
-            ),
-            "properties": {
-                "document_id": {"type": "string", "format": "uuid"},
-                "version_number": {"type": "integer"},
-                "text": {"type": "string"},
-                "hit_start": {"type": "integer"},
-                "hit_end": {"type": "integer"},
-            },
-        },
-        "SearchHit": {
-            "type": "object",
-            "properties": {
-                "score": {"type": "number"},
-                "document_id": {"type": "string", "format": "uuid"},
-                "version_number": {"type": "integer"},
-                "chunk_index": {"type": "integer"},
-                "chunk_text": {"type": "string"},
-                "start_char": {"type": "integer"},
-                "end_char": {"type": "integer"},
-                "highlights": {"type": "array", "items": {"type": "string"}},
-                "document": {"$ref": "#/definitions/Document"},
-            },
-        },
-        "SearchResponse": {
-            "type": "object",
-            "properties": {
-                "query": {"type": "string"},
-                "mode": {"type": "string"},
-                "count": {"type": "integer"},
-                "results": {"type": "array", "items": {"$ref": "#/definitions/SearchHit"}},
-            },
-        },
-    },
-}
 
 
 class ApiError(Exception):
@@ -460,6 +276,87 @@ def create_app() -> Flask:
         if doc is None:
             raise ApiError(f"document {doc_id} not found", status=404)
         return jsonify(doc)
+
+    @app.post("/documents/<doc_id>/versions")
+    @require_auth
+    def post_version(doc_id: str, user_id: uuid.UUID):
+        """Append a corrected version of an existing document.
+
+        The old body is never overwritten: a new version is appended and becomes
+        the current one. The previous version stays in Postgres as the audit
+        trail, but its chunks leave the index — a search only ever finds the
+        current version, so a corrected document is not found twice.
+
+        `change_reason` is optional but strongly encouraged: it is what makes the
+        version history readable later on.
+        ---
+        tags: [documents]
+        parameters:
+          - in: path
+            name: doc_id
+            required: true
+            type: string
+            format: uuid
+          - in: body
+            name: body
+            required: true
+            schema: {$ref: '#/definitions/NewVersionRequest'}
+        responses:
+          201:
+            description: New version created
+            schema: {$ref: '#/definitions/IngestResult'}
+          200:
+            description: 'Unchanged: the content is already the current version'
+            schema: {$ref: '#/definitions/IngestResult'}
+          400:
+            description: Validation error
+            schema: {$ref: '#/definitions/Error'}
+          401:
+            description: Missing or invalid bearer token
+            schema: {$ref: '#/definitions/Error'}
+          404:
+            description: Document not found
+            schema: {$ref: '#/definitions/Error'}
+        """
+        document_id = _parse_uuid(doc_id, "document id")
+        body = request.get_json(silent=True)
+        if not isinstance(body, dict):
+            raise ApiError("request body must be a JSON object")
+
+        change_reason = body.get("change_reason")
+        if change_reason is not None and not isinstance(change_reason, str):
+            raise ApiError("'change_reason' must be a string")
+
+        language = _parse_enum(Language, body.get("language"), "language")
+        path = body.get("path")
+        content = body.get("content")
+
+        if path:
+            content, _ = read_document_file(path)
+        elif not content:
+            raise ApiError("provide either 'content' or 'path'")
+
+        try:
+            result = add_version(
+                document_id=document_id,
+                content=content,
+                change_reason=change_reason,
+                created_by=user_id,
+                language=language.value if language else None,
+            )
+        except ValueError as exc:
+            # The document not existing is a 404; anything else is a bad request.
+            status = 404 if "does not exist" in str(exc) else 400
+            raise ApiError(str(exc), status=status) from exc
+
+        payload = {
+            "document_id": str(result.document_id),
+            "version_number": result.version_number,
+            "aktenzeichen": result.aktenzeichen,
+            "num_chunks": result.num_chunks,
+            "deduplicated": result.deduplicated,
+        }
+        return jsonify(payload), (200 if result.deduplicated else 201)
 
     @app.get("/documents/<doc_id>/passage")
     @require_auth

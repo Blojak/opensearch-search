@@ -34,6 +34,7 @@ from app.opensearch_store import (
     ensure_hybrid_pipeline,
     ensure_index,
     get_client,
+    delete_document_chunks,
     recreate_index,
 )
 
@@ -54,14 +55,6 @@ def _current_version(session, document: Document) -> DocumentVersion | None:
     )
 
 
-def _drop_document_chunks(client, document_id: uuid.UUID) -> None:
-    """Remove all OpenSearch chunks of a document (used before re-indexing it)."""
-    settings = get_settings()
-    client.delete_by_query(
-        index=settings.opensearch_index,
-        body={"query": {"term": {FIELD_DOCUMENT_ID: str(document_id)}}},
-        refresh=False,
-    )
 
 
 def _reindex_documents(client, session, documents, batch_size, drop_existing) -> int:
@@ -92,7 +85,7 @@ def _reindex_documents(client, session, documents, batch_size, drop_existing) ->
         if version is None:
             continue
         if drop_existing:
-            _drop_document_chunks(client, document.id)
+            delete_document_chunks(client, refresh=False, document_id=document.id)
         chunks = chunk_text(version.body_text)
         if not chunks:
             continue

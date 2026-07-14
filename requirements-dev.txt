@@ -1,0 +1,11 @@
+# Development and test dependencies.
+#
+# Kept out of requirements.txt on purpose: the runtime image installs only
+# requirements.txt, so nothing in here ends up in a production container.
+#
+#   pip install -r requirements-dev.txt   # for developing / running the tests
+#   pip install -r requirements.txt       # what the image installs
+
+-r requirements.txt
+
+pytest==8.3.4

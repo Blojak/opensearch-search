@@ -48,6 +48,7 @@ from app.opensearch_store import (
     FIELD_TEXT,
     FIELD_VERFAHREN_ID,
     FIELD_VERSION_NUMBER,
+    delete_document_chunks,
     get_client,
 )
 
@@ -242,6 +243,94 @@ def ingest_text(content: str, meta: DocumentMeta) -> IngestResult:
         )
 
 
+def add_version(
+    document_id: uuid.UUID,
+    content: str,
+    created_by: uuid.UUID,
+    change_reason: str | None = None,
+    language: str | None = None,
+) -> IngestResult:
+    """Append a new version of an existing document and re-index it.
+
+    This is how a document is *corrected*: the old body is never overwritten, a
+    new ``DocumentVersion`` is appended and ``current_version`` moves on. The
+    previous version stays in Postgres — that is the audit trail — but its chunks
+    are removed from OpenSearch, so a search only ever finds the current version
+    and a corrected document does not show up twice.
+
+    ``change_reason`` is optional: recording *why* something changed makes the
+    history far more useful, but a caller that cannot supply a reason should
+    still be able to correct a document rather than be blocked.
+
+    Re-submitting the content that is already current is a no-op (nothing
+    changed, so there is nothing to version).
+    """
+    client = get_client()
+    content_hash = compute_hash(content)
+
+    with session_scope() as session:
+        document = session.get(Document, document_id)
+        if document is None or document.deleted_at is not None:
+            raise ValueError(f"document {document_id} does not exist")
+        if session.get(User, created_by) is None:
+            raise ValueError(f"created_by user {created_by} does not exist")
+
+        current = (
+            session.query(DocumentVersion)
+            .filter(
+                DocumentVersion.document_id == document.id,
+                DocumentVersion.version_number == document.current_version,
+            )
+            .one_or_none()
+        )
+        if current is not None and current.content_hash == content_hash:
+            return IngestResult(
+                document_id=document.id,
+                version_number=current.version_number,
+                aktenzeichen=document.aktenzeichen,
+                num_chunks=_count_chunks(
+                    client, document.id, current.version_number
+                ),
+                deduplicated=True,
+            )
+
+        chunks = chunk_text(content)
+        if not chunks:
+            raise ValueError("no content to ingest (empty after chunking)")
+
+        version_number = document.current_version + 1
+        session.add(
+            DocumentVersion(
+                document_id=document.id,
+                version_number=version_number,
+                body_text=content,
+                content_hash=content_hash,
+                change_reason=change_reason,
+                created_by=created_by,
+            )
+        )
+        # The body changed, so the detected language may have changed with it.
+        document.language = language or detect_language(content).value
+        document.current_version = version_number
+        session.flush()
+
+        vectors = embed_passages([c.text for c in chunks])
+        # Drop the previous version's chunks first: only the current version is
+        # searchable, otherwise a corrected document would be found twice.
+        delete_document_chunks(client, document.id)
+        index_chunks(
+            client, document, version_number=version_number, chunks=chunks, vectors=vectors
+        )
+
+        return IngestResult(
+            document_id=document.id,
+            version_number=version_number,
+            aktenzeichen=document.aktenzeichen,
+            num_chunks=len(chunks),
+            deduplicated=False,
+        )
+
+
 def ingest_file(path: str | Path, meta: DocumentMeta) -> IngestResult:
     """Read a file from disk and ingest it, deriving the mime type from it."""
     path = Path(path)
@@ -265,9 +354,5 @@ def delete_document(document_id: uuid.UUID) -> bool:
             return False
         document.deleted_at = datetime.now(timezone.utc)
 
-        client.delete_by_query(
-            index=settings.opensearch_index,
-            body={"query": {"term": {FIELD_DOCUMENT_ID: str(document_id)}}},
-            refresh=True,
-        )
+        delete_document_chunks(client, document_id)
         return True

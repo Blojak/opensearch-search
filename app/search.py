@@ -23,6 +23,7 @@ from datetime import datetime
 from app.config import get_settings
 from app.db import session_scope
 from app.embedding import embed_query
+from app.filters import SearchFilters
 from app.models import Document, DocumentVersion
 from app.opensearch_store import (
     FIELD_AKTENZEICHEN,
@@ -48,18 +49,6 @@ class SearchMode(str, enum.Enum):
     LEXICAL = "lexical"
     SEMANTIC = "semantic"
     HYBRID = "hybrid"
-
-
-@dataclass
-class SearchFilters:
-    """Optional metadata filters applied to the search (mirrored from Postgres)."""
-
-    aktenzeichen: str | None = None
-    verfahren_id: str | None = None
-    klassifizierung: str | None = None
-    language: str | None = None
-    created_from: datetime | None = None
-    created_to: datetime | None = None
 
 
 @dataclass
