@@ -12,8 +12,8 @@ What is pinned here are the decisions, not the implementation:
 * the old body is **kept** in Postgres (that is the audit trail), but
 * the old version is **not searchable** — a corrected document must not show up
   twice, and
-* ``change_reason`` is **mandatory**, because an append-only history nobody
-  annotated is useless.
+* ``change_reason`` is **optional** — annotating a change makes the history far
+  more useful, but a missing reason must not block a correction.
 """
 
 from __future__ import annotations
@@ -129,6 +129,31 @@ def test_the_old_body_is_kept_as_the_audit_trail(document, user_id) -> None:
         assert [v.version_number for v in versions] == [1, 2]
         assert "Einbruch" in versions[0].body_text  # v1 is still there, verbatim
         assert versions[1].change_reason == "Sachverhalt korrigiert"
+
+
+def test_a_version_without_a_change_reason_is_accepted(document, user_id) -> None:
+    """A missing reason must not block a correction."""
+    from app.db import session_scope
+    from app.ingestion import add_version
+    from app.models import DocumentVersion
+
+    result = add_version(
+        document_id=document,
+        content="Der Zeuge schildert einen Raubueberfall in der Bahnhofstrasse.",
+        created_by=user_id,
+    )
+
+    assert result.version_number == 2
+    with session_scope() as session:
+        version = (
+            session.query(DocumentVersion)
+            .filter(
+                DocumentVersion.document_id == document,
+                DocumentVersion.version_number == 2,
+            )
+            .one()
+        )
+        assert version.change_reason is None
 
 
 def test_the_old_version_is_no_longer_searchable(document, user_id) -> None:

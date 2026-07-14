@@ -287,8 +287,8 @@ def create_app() -> Flask:
         trail, but its chunks leave the index — a search only ever finds the
         current version, so a corrected document is not found twice.
 
-        `change_reason` is **required**: an append-only history is worthless if
-        nobody recorded why something changed.
+        `change_reason` is optional but strongly encouraged: it is what makes the
+        version history readable later on.
         ---
         tags: [documents]
         parameters:
@@ -324,8 +324,8 @@ def create_app() -> Flask:
             raise ApiError("request body must be a JSON object")
 
         change_reason = body.get("change_reason")
-        if not change_reason or not isinstance(change_reason, str):
-            raise ApiError("'change_reason' is required (why is this changing?)")
+        if change_reason is not None and not isinstance(change_reason, str):
+            raise ApiError("'change_reason' must be a string")
 
         language = _parse_enum(Language, body.get("language"), "language")
         path = body.get("path")

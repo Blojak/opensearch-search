@@ -246,8 +246,8 @@ def ingest_text(content: str, meta: DocumentMeta) -> IngestResult:
 def add_version(
     document_id: uuid.UUID,
     content: str,
-    change_reason: str,
     created_by: uuid.UUID,
+    change_reason: str | None = None,
     language: str | None = None,
 ) -> IngestResult:
     """Append a new version of an existing document and re-index it.
@@ -258,8 +258,9 @@ def add_version(
     are removed from OpenSearch, so a search only ever finds the current version
     and a corrected document does not show up twice.
 
-    ``change_reason`` is mandatory: an append-only history is worthless if nobody
-    recorded *why* something changed.
+    ``change_reason`` is optional: recording *why* something changed makes the
+    history far more useful, but a caller that cannot supply a reason should
+    still be able to correct a document rather than be blocked.
 
     Re-submitting the content that is already current is a no-op (nothing
     changed, so there is nothing to version).

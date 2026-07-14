@@ -88,13 +88,12 @@ SWAGGER_TEMPLATE = {
         },
         "NewVersionRequest": {
             "type": "object",
-            "required": ["change_reason"],
             "properties": {
                 "change_reason": {
                     "type": "string",
                     "description": (
-                        "REQUIRED. Why is the document changing? The append-only "
-                        "history is worthless without it — a UI must ask for this."
+                        "Optional. Why is the document changing? Not enforced, but "
+                        "it is what makes the version history readable later on."
                     ),
                     "example": "Scan der Seite 3 nachgetragen",
                 },
