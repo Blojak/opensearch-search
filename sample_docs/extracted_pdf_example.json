@@ -1,0 +1,90 @@
+{
+  "schema_version": 1,
+  "source": {
+    "tool": "docling",
+    "tool_version": "1.10.0",
+    "mime_type": "application/pdf",
+    "filename": "Vermerk_AZ-2026-0042.pdf",
+    "ocr": false
+  },
+  "blocks": [
+    {
+      "type": "header",
+      "text": "VS-NfD — nur für den Dienstgebrauch",
+      "locator": {"page": 1}
+    },
+    {
+      "type": "heading",
+      "level": 1,
+      "text": "Vermerk zur Spurenlage",
+      "locator": {"page": 1}
+    },
+    {
+      "type": "toc",
+      "text": "Sachverhalt\t1",
+      "locator": {"page": 1}
+    },
+    {
+      "type": "toc",
+      "text": "Spurenlage\t2",
+      "locator": {"page": 1}
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sachverhalt",
+      "locator": {"page": 1}
+    },
+    {
+      "type": "paragraph",
+      "text": "Am Montagabend wurde in der Hauptstrasse ein Einbruch in die Geschäftsräume der Firma Muster GmbH gemeldet. Der Zeuge Mustermann gab an, gegen 21:30 Uhr zwei Personen beobachtet zu haben, die sich am rückwärtigen Eingang zu schaffen machten.",
+      "locator": {"page": 1}
+    },
+    {
+      "type": "paragraph",
+      "text": "Die Spurensicherung wurde noch in der Tatnacht durchgeführt. Der Zugang erfolgte offenbar über ein aufgehebeltes Kellerfenster.",
+      "locator": {"page": 1}
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Spurenlage",
+      "locator": {"page": 2}
+    },
+    {
+      "type": "list_item",
+      "text": "Werkzeugspuren am Kellerfenster, Sicherung durch Silikonabdruck",
+      "locator": {"page": 2}
+    },
+    {
+      "type": "list_item",
+      "text": "Daktyloskopische Spuren an der Innenseite der Fensterbank",
+      "locator": {"page": 2}
+    },
+    {
+      "type": "list_item",
+      "text": "Faserspuren, vermutlich Baumwolle, am Rahmen",
+      "locator": {"page": 2}
+    },
+    {
+      "type": "caption",
+      "text": "Tabelle 1: Übersicht der gesicherten Spuren",
+      "locator": {"page": 2}
+    },
+    {
+      "type": "table",
+      "text": "| Spur-Nr. | Art | Fundort | Auswertbar |\n|---|---|---|---|\n| 1 | Werkzeugspur | Kellerfenster, aussen | ja |\n| 2 | Daktyloskopisch | Fensterbank, innen | ja |\n| 3 | Faser | Rahmen | offen |",
+      "locator": {"page": 2}
+    },
+    {
+      "type": "paragraph",
+      "text": "Die Auswertung der daktyloskopischen Spuren steht noch aus. Ein Abgleich mit dem AFIS-Bestand wurde beantragt.",
+      "locator": {"page": 3}
+    },
+    {
+      "type": "footer",
+      "text": "Seite 3 von 3",
+      "locator": {"page": 3}
+    }
+  ]
+}

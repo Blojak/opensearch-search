@@ -1,0 +1,862 @@
+
+
+
+
+Impulspapier
+Staatsmodernisierung Ressort A
+
+Version 0.6
+Stand: 03.03.2026
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Datenlabor des Ressort A im StBA
+Kontakt: datenlabor@destatis.de
+
+[image: 24234116c57a367f8f84bc53425c4dfd]
+TLP:GREEN
+[image: ddc814473ae50da296e42008d58fae0f]
+
+
+2
+2
+
+Inhalt
+Einleitung	3
+Ausgangslage	4
+Modernisierungsagenda Bund	4
+Beschreibung des IST-Zustands	4
+Ziele der Anfrage und abgeleitete Bedarfe	5
+Thema 1: Datenbasierte Steuerung Modernisierungsagenda Bund	5
+Thema 2: Monitoring von Bürokratiekosten und Erfüllungsaufwänden	6
+Anforderungen	7
+Nutzendenperspektive	8
+Produkteigenschaften	9
+Lösungsansätze und Bewertung	11
+Beschreibung bekannter Lösungsansätze	11
+Vor und Nachteile der einzelnen Lösungen	12
+Szenarien für die weitere Umsetzung	12
+Risikoanalyse	13
+Fazit und Handlungsempfehlungen	13
+Quellen	14
+ANLAGEN	15
+Dokumentation PowerBI Dashboard	15
+Stückliste	15
+Datenaktualisierung	16
+Filter	16
+Daten aus PowerBI-Dashboard	16
+Änderungen	17
+PowerBI Berichtsserver	17
+Glossar	19
+Begriffserklärungen im Kontext Modernisierungsagenda	19
+Begriffserklärungen zu Erfüllungsaufwänden	20
+
+
+
+
+[bookmark: _Toc221646820]Executive Summary
+Im Koalitionsvertrag 2025 hat die Bundesregierung Bürokratieabbau und Staatsmodernisierung als zentrale Aufgaben formuliert. Das Ressort A ist für die Umsetzung im eigenen Geschäftsbereich verantwortlich, verfügt jedoch bislang über keine effizienten Steuerungswerkzeuge zur systematischen Erfassung und Überwachung von Umsetzungsprojekten und Bürokratiekosten.
+Gemeinsam mit dem Datenlabor und Referat Referat R1 wurden vier zentrale Bedarfe identifiziert: Identifikation und Zuordnung geplanter Umsetzungsprojekte, Nachverfolgung der Vorhaben sowie Monitoring der Bürokratiekosten und Erfüllungsaufwände. Als Lösungsansätze wurden Dashboard-Visualisierungen, Abfragetools und Projektportfoliomanagement-Software erarbeitet. Ein erster PowerBI-Dashboard-Prototyp zum Themenfeld Erfüllungsaufwände wurde Referat R1 bereitgestellt und soll bald hausweit verfügbar sein.
+Die weiteren Schritte hängen von den Vorgaben des Ressort B und des Staatssekretärsausschusses ab: Entweder erlässt das Ressort B verbindliche Monitoring-Vorgaben auf Basis einer zentralen Lösung, oder das Ressort A entwickelt eine eigene. Für beide Szenarien skizziert der Bericht mögliche Lösungswege. die je nach künftiger Entwicklung der Rahmenbedingungen weiter verfeinert werden. Das Ressort A nimmt dabei in der Umsetzung der Modernisierungsagenda eine Vorreiterrolle ein.
+Abschließend lässt sich feststellen, dass das Ressort A in der Umsetzung der Modernisierungsagenda eine Vorreiterrolle einnimmt. Der Bericht bietet eine erste Orientierung, wie die Umsetzung vorangetrieben werden kann.
+
+[bookmark: _Toc221646821]Ausgangslage
+[bookmark: _Toc221646822]Modernisierungsagenda Bund
+Die Modernisierungsagenda Bund gliedert sich in Handlungsfelder, Vorhaben und Maßnahmen.[footnoteRef:1] Zusätzlich werden bestimmte Maßnahmen mit besonderer Priorität als Hebelprojekte benannt. Ein hervorgehobenes Ziel und Messkriterium für den Erfolg der Modernisierungsagenda Bund ist, dass möglichst schnell eine „wahrnehmbare“ Reduktion von Bürokratiekosten und Erfüllungsaufwänden für Bürgerinnen und Bürger, Wirtschaft und Verwaltung zu realisieren ist.
+ Für die Erklärung der einzelnen Begriffe, s. Tabelle 3: Glossar Themenfeld „Modernisierungsagenda Bund“
+
+Die Modernisierungsagenda Bund und der Beschluss des St-Ausschusses zum Bürokratierückbau müssen durch das Ressort A im eigenen Zuständigkeitsbereich und Geschäftsbereich umgesetzt werden. Dies erfordert teilweise eigene Umsetzungen, aber auch in Zusammenarbeit mit dem Ressort B und anderen Ressorts. Um die Zielwerte aus den oben genannten Beschlüssen zu erreichen ist ein Monitoring der Fortschritte und eine Abstimmung und Steuerung von Vorhaben vorgesehen. 
+[bookmark: _Toc221646823]Beschreibung des IST-Zustands
+Vorgaben zur Umsetzung in den einzelnen Ressorts, sowie Vorgaben bezüglich eines Monitorings oder Berichtswesens zur Umsetzung befinden sich zurzeit im Aufbau. Federführend ist hier das Bundesministerium für Digitales und Staatsmodernisierung (Ressort B), insbesondere die Referate SBI1 und SBI2, in Zusammenarbeit mit einem Dienstleister.[footnoteRef:2]
+ Ersten Angaben zufolge könnte sich das Monitoring am Portfolio-Management Standards PMFlex orientieren, und mithilfe einer neuen Software für die Projekt- und Portfoliosteuerung (PMFlexOne) begleitet werden. Diese Softwarelösung ist selbst Teil der Modernisierungsagenda (Handlungsfeld 5, Maßnahme 5.1) und befindet sich derzeit im Aufbau. Laut Modernisierungsagenda Bund ist eine Umsetzung innerhalb von 4 Monaten geplant, was ungefähr Ende Februar 2026 entspräche. (Modernisierungsagenda Bund, S. 34)
+
+„Zielwerte und Inhalte werden nach Beschluss der Agenda im Rahmen von Umsetzungszyklen gemeinsam weiter erarbeitet und die Vorhaben darauf aufbauend umgesetzt. Diese Modernisierungsagenda ist ein lebendes Dokument; das Portfolio wird auch nach Kabinettbeschluss stetig evaluiert und weiterentwickelt. Monitoring und Berichte sollen nur da erstellt werden, wo sie wirklich nötig sind, und insbesondere dazu dienen, den Fortschritt von Modernisierungsvorhaben aufzuzeigen.“ (Modernisierungsagenda Bund, S. 15)
+Laut Beschluss des Staatssekretärsausschusses (St-Ausschuss) „Staatsmodernisierung und Bürokratierückbau“ vom 09.10.2015 werden die Ressorts
+„[…] in eigener Verantwortung die notwendigen Maßnahmen in die Wege leiten, um ihre jeweiligen Rückbauziele bis zum Ende der 21. Legislaturperiode zu erreichen. Die Umsetzung machen wir jährlich ressortscharf transparent. Binnen eines Jahres legt der Staatssekretärsausschuss dem Bundeskabinett ein schlankes Monitoring vor und führt dieses anlassbezogen fort. Eine Verbindung mit dem Bericht nach § 7 NKRG ist möglich.“ (St-Ausschuss, 09.10.2025)
+Das Ressort A ist seiner Verantwortung, notwendige Maßnahmen in die Wege zu leiten, zeitnah nachgekommen. Die Ressort A-interne Exploration von Umsetzungsprojekten, welche auf Vorhaben und Handlungsfelder der Modernisierungsagenda Bund einzahlen sollen, wurde bereits parallel zur Verabschiedung der Modernisierungsagenda Bund begonnen. Eine erste Sammlung von Vorschlägen für Umsetzungsprojekte fand im Rahmen individueller Abfragen in den gesetzgebenden Referaten statt. Dieser Prozess erforderte viel Kommunikation und Erklärungen sowie eine manuelle Zusammenführung der Daten. Eine umfassende, maschinenlesbare Datenbank liegt daher noch nicht vor.
+Um das herausgehobene Ziel und Messkriterium zur spürbaren Reduktion von Bürokratiekosten und Erfüllungsaufwänden zu erfüllen, hat das Ressort A ebenfalls bereits eine Abfrage von Zuständigkeiten für Rechtsnormen und bekannten Erfüllungsaufwänden in Kooperation mit dem Statistischen Bundesamt (StBA) durchgeführt. Dadurch soll im nächsten Schritt mit Abteilungen und gesetzgebenden Referaten gezielt über mögliche Reduktionen zu beraten. Diese Abfrage gestaltete sich schwierig, da die Arbeit mit den Daten in Tabellenprogrammen als wenig intuitiv wahrgenommen wurde und die manuelle Zusammenführung der Zulieferungen sehr zeitaufwändig war.
+[bookmark: _Toc221646824]Ziele der Anfrage und abgeleitete Bedarfe
+Ziel der Anfrage von Referat R1 ist es, mithilfe einer softwarebasierten Lösung die Ressourcen und Prioritäten während der politischen Umsetzung der Modernisierungsagenda Bund im Ressort Ressort A zu steuern und dem St-Ausschuss zu berichten.
+„Für Ressort A muss strategisch entschieden werden, welche Vorhaben prioritär verfolgt werden und in welchen Zeiträumen mit welchen Beteiligten eine Umsetzung erfolgt.“ (Zitat aus Anfrage, 1.1, Seite 2/4)
+Auf Basis der vorliegenden Anfrage erkennen wir vier Bedarfe, welche Referat R1 zur Umsetzung und Steuerung der Modernisierungsagenda Bund hat.
+I. Identifikation geplanter Umsetzungsprojekte im Geschäftsbereich des Ressort A
+II. Zuordnung zu relevanten Handlungsfeldern/Vorhaben/Maßnahmen der Modernisierungsagenda Bund
+III. Nachverfolgung und Status der Umsetzungsvorhaben
+IV. Nachverfolgung und Status des geplanten Bürokratierückbaus und der Senkung von Erfüllungsaufwänden
+Wir operationalisieren diese vier Bedarfe in vier Lösungsansätze oder Bausteine einer Lösung, innerhalb zwei verschiedener Themen.
+[bookmark: _Toc221646825]Thema 1: Datenbasierte Steuerung Modernisierungsagenda Bund
+Im Rahmen der Anfrage spezifiziert Referat R1 folgendes Ziel für die Steuerung der Modernisierungsagenda Bund:
+„Es soll sowohl ein Gesamtüberblick über die Maßnahmen möglich sein als auch ein Monitoring des Fortschritts der einzelnen Maßnahmen (inkl. Abbildung der beteiligten Stellen) ermöglicht werden. Zudem soll über diese Aufbereitung eine strategische Steuerung ermöglicht werden, mithin die Entscheidung darüber, welche Projekte vorrangig verfolgt werden.“ (Zitat aus Anfrage, 1.2, Seite 2/4)
+Dieses Ziel übersetzen wir in die folgenden Bedarfe:
+[B1.1] Strukturierte Erhebung zum IST- und SOLL-Zustand von Regelungsvorhaben/Rechtsnormen und Umsetzungsprojekten
+[B1.2] Werkzeug zur datenbasierten Steuerung geplanter Umsetzungsprojekte
+[bookmark: _Toc221646826]Thema 2: Monitoring von Bürokratiekosten und Erfüllungsaufwänden
+Im Rahmen der Anfrage spezifiziert Referat R1 folgendes Ziel für die Arbeit mit Erfüllungsaufwänden und Bürokratiekosten, sowie die deren Verknüpfung zur Modernisierungsagenda Bund:
+„[…] Einzelne Beispiele für das Monitoring sind: Es soll z.B. nachvollziehbar werden, um wie viel % bzw. € die Bürokratiekosten nach Ressort A-Anteil bereits reduziert wurden (Handlungsfeld 1, Maßnahme 1.1) oder in wie vielen Fällen durch welche Fachbereiche bereits Praxischecks (mit welchem Mehrwert) durchgeführt wurden (Handlungsfeld 1, Maßnahme 3.1).“ (Zitat aus Anfrage, 1.2, Seite 2/4)
+Dieses Ziel übersetzen wir in die folgenden Bedarfe:
+[B2.1] Hausweite Abfrage der Informationen zu Bürokratiekosten und Erfüllungsaufwänden (sowie nachgelagert: Praxischecks) vereinfachen
+[B2.2] Report zu Bürokratiekosten/Erfüllungsaufwänden, insbesondere ihre Entwicklung im Zeitverlauf nach Umsetzungsprojekten und Abteilungen.
+Aus unserer Sicht erfordert Thema 1 einen umfassenderen Blick als das Thema 2. Thema 1 betrifft vor allem die Steuerung der Umsetzung, insbesondere die Erfassung, Priorisierung und Erfolgskontrolle. Thema 2 ist eine notwendige Voraussetzung oder Begleitung zu Thema 1: Indem Erfüllungsaufwände und Bürokratiekosten von Rechtsnormen und Regelungsvorhaben sichtbar gemacht werden, kann das Ressort A Gesetze mit hohen Belastungen auf mögliche Einsparpotenziale prüfen, Vorhaben mit Entlastungen priorisieren oder umgekehrt notwendige Vorgaben mit Mehrbelastungen durch Vorhaben mit Entlastungen kombinieren.
+Im Verlauf der Beratung wurde klar, dass die Bedarfe aus Thema 2, insbesondere B2.2 die drängendste Herausforderung darstellt und deshalb priorisiert werden sollte. Indem Erfüllungsaufwände außerhalb der bestehenden Tabellenverarbeitung nutzerfreundlicher präsentiert und die damit verbundenen Rechtsnormen einzelnen Abteilungen oder Referaten zugeordnet werden, kann die hausinterne Vorbereitung und Ideenfindung zu möglichen Umsetzungsprojekten bedeutend gefördert werden. Das Datenlabor kann hier durch Auswertungen und die grafische Aufbereitung, sowie die Vermittlung von Kompetenzen zur weiteren Verarbeitung durch Referat R1 unterstützen.
+	Abbildung 1: Visualisierung der Bedarfe
+[image: ]
+Eigene Darstellung, Quelle: Anfrage und Gespräche mit Referat R1
+[bookmark: _Toc221646827]Anforderungen
+Im Folgenden haben wir in Zusammenarbeit mit Referat R1 diese initialen Bedürfnisse konkreter ausgearbeitet. Abbildung 3 auf Seite 8 fasst die Ergebnisse zusammen. Im Anschluss daran haben wir konkrete Leitfragen gesammelt, auf die ein Produkt Antworten geben muss, damit die Bedarfe adressiert sind. Zuletzt haben wir eine erste grobe Anforderungsanalyse vorgenommen, welche Daten dazu erhoben und zusammengetragen werden müssten und welche weiteren Anforderungen zur Präsentation und Funktionalitäten eines Produkts erkennbar sind.
+[bookmark: _Ref221289679][bookmark: _Ref221289672]
+Abbildung 2: Entwurf eines Product Vision Board aus der gemeinsamen Diskussion
+[image: ]
+[bookmark: _Toc221646828]Eigene Darstellung, Quelle: Gespräche mit Referat R1
+Nutzendenperspektive
+Das Product Vision Boards in Abbildung 3 definiert (analog zu den oben ausgearbeiteten zwei Bedarfsgruppen) zwei unterschiedliche Visionen für ein mögliches Produkt. Aus diesem Grund sollte in Betracht gezogen werden, ob auch verschiedene Produkte die jeweilige Vision bzw. das jeweilige Thema bedienen könnten.
+Gleichzeitig betreffen beide Visionen/Themen ähnliche Stakeholder, welche in der ersten Spalte abgebildet werden. Auf Basis unserer Gespräche unterscheiden wir vorläufig zwischen drei Gruppen:
+(1) Zulieferung von Daten und Informationen (z. B. gesetzgebende Referate),
+(2) Koordination und Steuerung (z. B. Referat Referat R1 Ressort A mit Verantwortung für „Bessere Rechtssetzung und Staatsmodernisierung“), 
+(3) Information und Politische Kontrolle (z. B. Leitung oder Staatssekretärsebene).
+Eine spezifische Erfassung der Ansichten und Herausforderungen der Stakeholder, z. B. mithilfe von user personas[footnoteRef:3] und Interviews wird empfohlen. So können insbesondere Informationsbedürfnisse der Gruppe (3) und (2) Kenntnisstand und Fähigkeiten der Gruppe (1) genauer berücksichtigt werden. 
+ https://www.digitale-verwaltung.de/SharedDocs/downloads/Webs/DV/DE/servicehandbuch.pdf, S. 12 https://www.digitale-verwaltung.de/SharedDocs/downloads/Webs/DV/DE/persona-vorlage.html 
+
+Im Folgenden soll der Fokus auf der Sicht und den Herausforderungen von Referat R1 als zentralem Bedarfstragenden liegen. Tabelle 1 fasst die Leitfragen zusammen, welche mithilfe einer technischen Lösung beantwortet werden sollen. Diese Auflistung basiert auf Gesprächen mit Referat R1 und stellt einen Startpunkt dar, ohne Anspruch auf Vollständigkeit und abhängig von möglichen zukünftigen Vorgaben aus dem Ressort B.
+[bookmark: _Ref221639759]Tabelle 1: Übersicht möglicher Leitfragen (nicht abschließend)
+	
+	Thema 1
+	Thema 2
+
+	Leitfragen
+	· Welche Handlungsfelder, Vorhaben und Maßnahmen betreffen das Ressort A?
+· Welche Umsetzungsprojekte im Ressort A haben wir identifiziert?
+· Auf welches Handlungsfeld zahlt Umsetzungsprojekt X ein?
+· Wer ist für Umsetzungsprojekt X verantwortlich?
+· Welche Priorität räumen für Umsetzungsprojekt X ein?
+· Welchen Status hat Umsetzungsprojekt X (geplant, in Umsetzung, umgesetzt, zurückgestellt, o. ä.)
+· Wie können Verantwortliche direkt den Status von Umsetzungsprojekt X pflegen/aktualisieren
+· Wie beeinflusst Umsetzungsprojekt X Erfüllungsaufwände / Bürokratiekosten?
+· Wie ist das Verhältnis zwischen Bürokratieabbau und Belastungen durch neue Rechtsnormen?
+· …
+
+	· Welche Abteilungen (entspricht inhaltlichen Politikfeldern) haben die größten Anteile bei Bürokratiekosten und bekannten Erfüllungsaufwand?
+· Welche Referate haben die größten Anteile bei Bürokratiekosten und Erfüllungsaufwand?
+· Welche Rechtsnormen haben insgesamt die größten Anteile an den Kosten? 
+· Welche Einzelregelungen haben die größten Anteile?
+· Unterscheidung von Kosten/Aufwänden nach Normadressat?
+· Wie verteilen sich die Kosten auf die Messhilfen zeitliche und finanzielle Belastung?
+· Welche Berichtspflichten gibt es? 
+· Welche Kosten/Aufwände werden dadurch verursacht?
+· Welche Erfüllungspflichten/Bürokratiekosten erwachsen aus EU-Verordnungen?
+· Wie entwickeln sich Bürokratiekosten/Erfüllungsaufwände im Zeitverlauf (auch für oben spezifizierten Filter/Ausschnitte der Daten)
+· Welche Rechtsnormen betreffen Sicherheitsbehörden?
+· …
+
+
+	Fokus 
+	Modernisierungsagenda Bund
+
+	· Modernisierungsagenda Handlungsfeld H1.1 
+· Beschluss des St-Ausschuss
+
+
+Eigene Darstellung, Quelle: Gespräche mit Referat R1
+[bookmark: _Toc221646829]Produkteigenschaften
+In der folgenden Tabelle werden die Eigenschaften möglicher Produkte beschrieben, die relevant sind, um die Leitfragen beantworten zu können. Dabei geht es sowohl um die benötigte Datengrundlage als auch um die technischen Features der Projekte, aufgeteilt auf die vorher identifizierten zwei Themenfelder.
+[bookmark: _Ref221641926]Tabelle 2: 
+	
+	Thema 1
+	Thema 2
+
+	Benötigte Datengrundlage 
+	· Liste strategischer Prioritäten (bspw.  Handlungsfelder, Maßnahmen, etc.)
+· Kriterien der zur Priorisierung 
+· Legende/Erläuterung
+· Liste bzw. Datenbank Umsetzungsprojekte
+· Beschreibung
+· Zuordnung Abteilung und Referat(e)
+· Priorität
+· Zieldatum
+· Zuletzt aktualisiert am…
+· Status
+· geplant
+· in Umsetzung
+· umgesetzt
+· Zuordnung Umsetzungsprojekte zur Modernisierungsagenda 
+· Handlungsfeld
+· Vorhaben
+· (optional: Maßnahme)
+· KANN: Reduktionsprognosen Ressort A für Umsetzungsprojekte 
+· … nach Status
+· KANN: Liste/Datenbank von Rechtsnormen im Ressort Ressort A
+· geplant
+· vorhanden
+· abgeschafft
+
+	· Liste Belastung in Euro, nach…
+· Rechtsnorm (Gesetz, usw.)
+· Paragraf
+· Referat
+· Abteilung
+· Normadressat
+· Norm-Ursprung (EU, national)
+· …
+· Liste Belastung in Zeitaufwand, nach
+· Rechtsnorm (Gesetz, usw.)
+· Paragraf
+· Referat
+· Abteilung
+· Normadressat
+· Norm-Ursprung (EU, national)
+· Umgerechnet in Euro
+· …
+· Liste Informationspflichten der Wirtschaft, nach…
+· Paragraf
+· Referat
+· Abteilung
+· Art der Berichtspflicht
+· Norm-Ursprung (EU, national)
+· Umgerechnet in Euro
+· …
+· Liste geänderter Rechtsnormen
+· Differenz / Saldo Erfüllungsaufwand zu Status Quo
+· Glossar
+· Zentrale Begriffserklärungen aus der OnDEA-Datenbank
+
+	Design
+
+	· Grafische Oberfläche
+· Portfolio-Übersicht 
+
+	· Grafische Übersichten, ggf. ergänzt durch Tabellen mit vollständigen Daten
+
+
+	Features
+	· Editor: Umsetzungsprojekte anlegen und bearbeiten
+· Werkzeug für die hausweite Abfrage zur Zulieferung und Validierung von gesetzgebenden Referaten
+· Dashboard/Cockpit: Portfolio-Darstellung (z. B. nach Handlungsfeldern, o.ä.)
+· Werkzeug/Methodik zur Bewertung/Priorisierung von Umsetzungsprojekten
+· Report-Funktion
+· …
+	· Schnittstelle für Datenimporte von Bilanzierungsberichten des StBA
+· Visualisierung der Erfüllungsaufwände und Bürokratiekosten
+· IST-Zustand
+· Entwicklung während der der Legislatur
+· Saldo (Bedarf für Ausgleich oder Spielraum für neue Gesetze, o.ä.)
+· Erläuterung 
+· Werkzeug für die hausweite Abfrage zur Zulieferung und Validierung von gesetzgebenden Referaten
+
+
+Eigene Darstellung, Quelle: Gespräche mit Referat R1
+Für das Thema 1 wurde weiterführend zu den erarbeiteten Produkteigenschaften eine mögliche Datenhaltung skizziert. Darauf aufbauend kann eine visuelle Darstellung dabei unterstützen, die Leitfragen zu beantworten.
+Abbildung 3: Beispiel einer möglichen Datenhaltung für Thema 1[image: ]
+Eigene Darstellung, Quelle: Gespräche mit Referat R1
+Für das Thema 2 gibt es durch die quartalsweise Lieferung der Bilanzierungsberichte aus dem Statistischen Bundesamt an das Ressort A bereits eine Datengrundlage, die als Ausgangspunkt verwendet werden kann. Um keinen weiteren Arbeitsschritt einzuführen wird empfohlen, diese zu verwenden und für zukünftige Entwicklungen mögliche Ergänzungen in diese Grundlage einzuarbeiten.
+[bookmark: _Toc221646830]Lösungsansätze und Bewertung
+[bookmark: _Toc221646831]Beschreibung bekannter Lösungsansätze
+Im Folgenden sollen softwarebasierte Lösungsansätze für die Anforderungen beschrieben werden, welche im Rahmen der Zusammenarbeit der Datenlabore oder von anderen Stellen bereitgestellt werden könnten.
+Tabelle 3: Steckbrief „Dashboard zu Erfüllungsaufwänden und Bürokratiekosten“
+	Bezeichnung
+	Dashboard zu Erfüllungsaufwänden und Bürokratiekosten
+
+	Beschreibung
+	Aufbereitung von Daten aus verschiedenen Quellen und Darstellung von Übersichten in Echtzeit oder von regelmäßig aktualisierten Übersichten.
+
+	Relevante 
+Funktionen
+	· Visualisierung von KPIs und Metriken 
+· Interaktive Filter und Drill-down-Optionen 
+· Automatisierte Datenaktualisierung 
+· Benutzerdefinierte Layouts und Designs
+
+	Beispiele
+	Prototyp Datenlabor Ressort A, Bürokratieradar BMAS
+
+	Vorteile
+	· Bildet Daten zu [B2.2] interaktiv ab
+· Pflege/Anpassungen durch Nutzende grundsätzlich möglich
+· Betrieb direkt möglich (bei Auswahl entsprechender im Ressort A bereits vorhandener Technologie) 
+· Datenformat zu Erfüllungsaufwänden entspricht dem StBA Standardformat der Bilanzierungsberichte
+
+	Nachteile
+	· Keine Funktion zur Abfrage im Rahmen von [B1.1], [B2.1] abgebildet, hausweite Abfragen zu [B1.1] grundsätzlich möglich 
+· Kein Portfoliomanagement integriert [B1.2], nur erster Schritt zur Identifikation hoher Werte bei Erfüllungsaufwänden und Bürokratiekosten
+· Je nach gewählter Technologie Aufwände sehr unterschiedlich.
+
+
+Eigene Darstellung, Quelle: Gespräche mit Referat R1
+Tabelle 4: Steckbrief „Abfragetools“
+	Bezeichnung
+	Datenerfassung
+
+	Beschreibung
+	Systematisches Erfassen von Daten (z. B. per Online-Formular, Umfrage oder Eingabemaske)
+
+	Relevante 
+Funktionen
+	Erstellung von Eingabeformularen/Umfragen
+Validierung und Strukturierung der eingegebenen Daten
+Automatisierte Übertragung in Datenbanken oder Tabellen
+Benutzerfreundliche Oberflächen für Endnutzer
+
+	Beispiele
+	CODA BMUN, LimeSurvey
+
+	Vorteile
+	Flexible Anpassung an Bedarfe möglich
+Schnelle, präzise und strukturierte Datenabfrage
+Reduzierung von manuellen Eingabefehlern
+Zeitersparnis durch Automatisierung
+Zentrale Datenhaltung und Auswertbarkeit
+
+	Nachteile
+	Akzeptanz bei Nutzern im Vergleich zu bisherigen Verfahren muss hergestellt werden
+
+
+Eigene Darstellung, Quelle: Gespräche mit Referat R1
+Tabelle 5: Steckbrief „Projekt- und Portfoliomanagement-Software“
+	Bezeichnung
+	Projekt- und Portfoliomanagement-Software
+
+	Beschreibung
+	Planung, Steuerung, Überwachung von Projekten, sowohl auf Einzelprojekt- als auch auf Portfolioebene
+
+	Relevante 
+Funktionen
+	Projektplanung (Zeitpläne, Meilensteine, Abhängigkeiten)
+Ressourcenmanagement (Personen, Budgets, Material)
+Fortschrittsverfolgung 
+Risiko- und Qualitätsmanagement
+Portfolio-Übersicht (Priorisierung, strategische Ausrichtung)
+
+	Beispiele
+	PMFlexOne (Ressort B, PD)
+
+	Vorteile
+	Wird bereits im Rahmen anderer Themen genutzt
+Mögliche Einheitlichkeit zu anderen Ressorts, sollte dies als Vorschlag vom Ressort B kommen
+Transparenz und Echtzeit-Fortschrittskontrolle
+Skalierbarkeit
+
+	Nachteile
+	Wenig Flexibilität
+Hoher Einarbeitungsaufwand, besonders bei umfangreichen Tools.
+Nur hilfreich bei konsequenter Nutzung
+Keine Abfragen und auch keine Integration von Abfragetools möglich
+
+
+Eigene Darstellung, Quelle: Gespräche mit Referat R1
+Zur Übersicht und in konkretem Bezug zu den erarbeiteten Bedarfen folgt hier eine Übersicht zu den Vor- und Nachteilen der verschiedenen Lösungsansätzen.
+[bookmark: _Toc221646832]Vor und Nachteile der einzelnen Lösungen 
+	Lösung
+	Vorteile
+	Nachteile
+	B1.1
+	B1.2
+	B2.1
+	B2.2
+
+	Dashboard
+	Visualisierung von Daten und schnelle Erfassung von Zusammenhängen
+	Keine weitere Aussteuerung der Erkenntnisse
+	
+	
+	
+	
+
+	Abfragetool
+	Schnelle, präzise und strukturierte Datenabfrage
+	Starre Formate aus Anwendersicht
+	
+	
+	
+	
+
+	Projekt-Portfoliomanagement- Software
+	Überblick zu laufenden Projekten/Vorhaben an einem Ort
+Erfasst Zuständigkeiten/Aufgaben 
+	Pflege durch Beteiligte Referate notwendig
+
+	
+	
+	
+	
+
+
+[bookmark: _Toc221646833]Szenarien für die weitere Umsetzung
+Die weitere Umsetzung hängt maßgeblich davon ab, ob und in welcher Form das Ressort B oder der St-Ausschuss verbindliche Vorgaben für das Monitoring der Modernisierungsagenda Bund erlassen. Daraus ergeben sich zwei Hauptszenarien, die jeweils unterschiedliche Handlungsoptionen für das Ressort A und Referat R1 mit sich bringen.
+1. Ressort B erlässt einheitliche Vorgaben für das Monitoring der Modernisierungsagenda
+Das Ressort B gibt klare, verbindliche Vorgaben für das Monitoring und die Steuerung der Modernisierungsagenda vor – sehr wahrscheinlich in Form einer zentralen Projekt- und Portfoliomanagement-Software (z. B. PMFlexOne).
+Szenario 1a: Nutzung des vorgeschriebenen Tools für das einheitliche Monitoring
+· Das Ressort A übernimmt die vom Ressort B vorgegebene Lösung (z. B. PMFlexOne) für das Monitoring der Modernisierungsagenda.
+· Vorteile: 
+· Einheitliche Steuerung und Berichterstattung im Ressortverbund
+· Geringerer Abstimmungsaufwand mit anderen Ressorts
+· Skalierbarkeit und Echtzeit-Fortschrittskontrolle
+· Nachteile/Risiken: 
+· Geringe Flexibilität bei der Anpassung an Ressort A-spezifische Bedarfe
+· Hoher Einarbeitungsaufwand für die Beteiligten
+· Keine direkte Integration von Abfragetools oder spezifischen Auswertungen zu Erfüllungsaufwänden
+Szenario 1b: Nutzung des vorgeschriebenen Tools für die Steuerung + ergänzendes Tool für Erfüllungsaufwände
+· Das Ressort A nutzt die Ressort B-Lösung für das Projekt- und Portfoliomanagement (Thema 1) und ergänzt diese um ein spezifisches Dashboard für die detaillierte Auswertung von Bürokratiekosten und Erfüllungsaufwänden (Thema 2).
+· Vorteile: 
+· Erfüllung der Ressort B-Vorgaben bei gleichzeitiger Abdeckung der Ressort A-spezifischen Bedarfe
+· Synergien durch Kombination von zentraler Steuerung und detaillierter Datenanalyse
+· Nachteile/Risiken:
+· Doppelte Pflege von Daten in zwei Systemen
+· Höherer Koordinationsaufwand zwischen den Tools
+2. Ressort B macht keine einheitlichen Vorgaben für das Monitoring der Modernisierungsagenda
+Das Ressort B erlässt keine verbindlichen Vorgaben oder verschiebt die Entscheidung auf unbestimmte Zeit. Das Ressort A muss eigenständig eine Lösung entwickeln.
+Szenario 2a: Baseline mit Excel/Berichten
+· Beibehaltung des Status quo mit Excel-Listen und manuellen Berichten.
+· Vorteile:
+· Keine zusätzlichen Investitionen oder Schulungen nötig
+· Geringer technischer Aufwand
+· Nachteile/Risiken:
+· Hoher manueller Aufwand, Fehleranfälligkeit
+· Keine Echtzeit-Auswertung oder interaktive Steuerung möglich
+· Keine nachhaltige Lösung für die Modernisierungsagenda
+Szenario 2b: PowerBI für Bürokratieabbau, externes Tool für PPM
+· Weiternutzung des als Mock-up erstellten PowerBI Dashboards als Informationsquelle zum Thema Erfüllungsaufwände, Einführung eines externen Tools zum Produktportfoliomanagement.
+· Vorteile:
+· Keine weiteren Aufwände für Thema 2
+· Schnelle Umsetzbarkeit
+· Nachteile/Risiken:
+· Je nach gewähltem Tool mögliche Lizenzkosten
+· PPM Tool nur hilfreich bei konsequenter Nutzung aller relevanten Beteiligten
+· Keine Abfragen und auch keine wirkliche Integration von Abfragetools möglich
+Szenario 2c: Leistung des Datenlabors für Bürokratieabbau und Datenabfrage
+· Übernahme und Anpassung der BMAS-Lösung (Bürokratieradar) für beide Themen (Bürokratieabbau und Datenabfrage) durch das Datenlabor des Ressort A.
+· Vorteile:
+· Synergien durch Nutzung einer bereits erprobten Lösung
+· Geringere Abhängigkeit von externen Partnern
+· Möglichkeit der hausinternen Weiterentwicklung und Anpassung
+· Langfristige Lösung, könnte zukünftig auch modular erweitert werden 
+· Nachteile/Risiken: 
+· Aufwand für Anpassung an Ressort A-spezifische Bedarfe
+· Höherer technischer Aufwand
+· erfordert Zusammenarbeit mit weiteren Referaten im Ressort A
+[bookmark: _Toc221646834]Risikoanalyse
+Neben den möglichen Szenarien sollte auch weiterhin beachtet werden, dass es neben den oben dargestellten Nachteilen und Risiken der technischen Lösungsvorschläge auch Risiken inhaltlicher Art gibt, die bei der Entscheidung mitgedacht werden müssen.
+Zum einen die Datenverfügbarkeit und -qualität: Hier gilt es zum Beispiel zu beachten, dass die Erfüllungsaufwände nur als Schnappschuss, nicht als Vollerhebung verfügbar sind. Dies schränkt die Nutzbarkeit als Steuerungsinstrument ein. Zudem ebenfalls relevant ist die Vermischung von ex ante und ex post Schätzungen, da ex ante Schätzungen oft höher als ex post Schätzungen sind. Dieser Unterschied sollte von der zukünftigen Lösung beachtet werden. Zudem sind einige festgestellte Bedarfe nur durch eine signifikante Erweiterung der bestehenden Datengrundlage abdeckbar. Inwiefern dies realistisch ist bzw. wie die zukünftigen Entwicklungen diesbezüglich aussehen, hat ebenfalls Relevanz für die weiteren Handlungsoptionen.
+Ein weiterer Aspekt, der maßgeblich den initialen Aufwand und die Pflege der verschiedenen Lösungsoptionen beeinflusst sind die noch unklaren inhaltlichen Vorgaben für das Monitoring. Je nach gewünschtem Zeitintervall bieten sich eventuell andere Optionen mehr an. Auch ob eine inhaltliche Übereinstimmung zwischen eines Reportings an den St-Ausschuss und des der Ressort B Koordinierung besteht ist aktuell unklar. Sobald hier mehr Informationen vorliegen, sollten die Szenarien und Lösungsoptionen dahingehend analysiert werden.
+[bookmark: _Toc221646835]Fazit
+Das Ressort A ist nach unseren aktuellen Kenntnisstand Teil einer Gruppe von Pionieren. Das Ressort macht sich nicht nur gezielt Gedanken, wie die Steuerung der Modernisierungsagenda Bund praktisch umgesetzt werden kann, sondern ist bestrebt sich dabei auch bereits um die Verknüpfung dieser Steuerung mit Daten zu Erfüllungsaufwänden in der Praxis zu kümmern. So wird die Maßgabe der spürbaren Reduktion von Bürokratie- und Erfüllungsaufwänden in der Priorisierung berücksichtigt und überprüfbar werden.
+Unter den aktuellen Umständen kann im Rahmen dieses Berichtes keine eindeutige Produktempfehlung gegeben werden, jedoch enthält der vorliegende Bericht Impulse, in welche Richtung für die Zukunft gedacht werden kann, welche Rahmenbedingungen zu bedenken sind und was für Optionen in Abhängigkeit davon möglich erscheinen. Ein zentraler Aspekt, der bereits jetzt und unabhängig von den Entwicklungen der Rahmenbedingungen angegangen werden sollte, ist das Herausfiltern wichtiger Indikatoren und möglicher Datengrundlagen dafür. Darauf bauen die verschiedenen Lösungsoptionen gleichermaßen auf. In diesem Themenfeld exploriert das Datenlabor des Ressort A bereits Möglichkeiten gemeinsamer Datenhaltung im Ressort A.
+Als Raum für Innovation und Vorreiter in der Umsetzung von digitalen Lösungen im Ressort A wird das Datenlabor des Ressort A die Entwicklungen im Themenkomplex Modernisierungsagenda und Bürokratieabbau beobachten und gemeinsam mit den Datenlabore der anderen Häuser Arbeiten unternehmen, die Umsetzung der Modernisierungsagenda und dem damit eng verknüpften Thema des Bürokratiekostenabbaus wirksam zu unterstützen.
+
+
+
+[bookmark: _Toc221646836]Quellen
+
+Bundesverwaltungsamt (2026): PMflex. Das ganzheitliche Projektmanagementsystem. (Link: https://www.bva.bund.de/DE/Services/Behoerden/Beratung/BZB/Themenwelten/Strategie/Projektmanagement/PMflex/pmflex_node.html, zuletzt abgerufen: 02.02.2026)
+Bundesverwaltungsamt (2026): Portfoliomanagement. Das ganzheitliche Projektmanagementsystem für die öffentliche Verwaltung. Version 1.01, Januar 2026. (Link: https://www.bva.bund.de/SharedDocs/Downloads/DE/Behoerden/Beratung/GrossPM/PMflex/01_Leitfaeden/PMflex-Portfoliomanagement-Leitfaden.pdf; zuletzt abgerufen: xx.xx.2026)
+Bundesministerium für Digitales und Staatsmodernisierung (01.10.2025): Modernisierungsagenda – für Staat und Verwaltung (Bund). Link: https://bmds.bund.de/fileadmin/Ressort B/Dokumente/Modernisierungsagenda_barrierefrei.pdf, zuletzt abgerufen: 02.02.2026
+Bundesministerium für Innern und Heimat (2023): Servicehandbuch. Wegweiser für die Digitalisierung von Verwaltungsleistungen. (Link: https://www.digitale-verwaltung.de/SharedDocs/downloads/Webs/DV/DE/servicehandbuch.pdf, zuletzt abgerufen 06.02.2026)
+Bundesministerium für Innern und Heimat (2019): Persona-Vorlage. https://www.digitale-verwaltung.de/SharedDocs/downloads/Webs/DV/DE/persona-vorlage.html
+Bundesministeriums des Innern und für Heimat, Referat Referat R1 (23.10.2025): Anfrage Beratung Staatsmodernisierung Ressort A. (251023_Datenlabor_Fragebogen_Staatsmodernisierung Ressort A.docx)
+Staatssekretärsausschusses Staatsmodernisierung und Bürokratierückbau (09.10.2025): Beschluss des Staatssekretärsausschusses Staatsmodernisierung und Bürokratierückbau. Vereinbarung ressortspezifischer Bürokratierückbauziele und Erweiterung der „One in, one out“-Regel. Protokoll.
+Statistisches Bundesamt (2026): OnDEA. Online-Datenbank des Erfüllungsaufwands. (Link: https://www.ondea.de/DE/Home/home_node.html, letzter Zugriff: 06.02.2026)
+Statistisches Bundesamt (2026): OnDEA. Online-Datenbank des Erfüllungsaufwands. Glossar. (Link: https://www.ondea.de/DE/Service/Glossar/glossar_node.html, letzter Zugriff: 06.02.2026)
+Statistisches Bundesamt (2025): Leitfaden zur Ermittlung und Darstellung des Erfüllungsaufwands in Regelungsvorhaben der Bundesregierung. (Link: https://www.normenkontrollrat.bund.de/Webs/Kontrollrat/SharedDocs/Downloads/DE/leitfaden-erfuellungsaufwand.pdf; zuletzt abgerufen: 30.01.2026)
+ 
+
+
+[bookmark: _Toc221646837]ANLAGEN
+[bookmark: _Toc221646838]Dokumentation PowerBI Dashboard
+[bookmark: _Toc221646839]Stückliste
+Die PowerBI Datei „Erfuellungsaufwaende.pibx“ enthält die folgenden fünf Seiten, die ersten vier bilden jeweils eine Übersicht über verschiedene Kennzahlen zu dem jeweiligen Themenfeld ab. Die fünfte Seite enthält ein Glossar. Die Werte spiegeln dabei immer den aktuellsten Datenstand wieder.
+Tabelle 6: Auflistung der visualisierten Daten/Informationen
+	Seite
+	Inhalt
+
+	[bookmark: _Hlk221641053]Belastung
+	a. Jährliche Belastung in 1.000 Euro nach
+· Rechtsnorm
+· Nach Referat
+· Nach Abteilung
+b. Jährliche Belastung in 1.000 Euro in % nach Referat
+c. Tabelle mit Informationen zu
+· Rechtsnorm
+· Paragraf
+· Bezeichnung der Vorgabe
+· Jährliche Belastung in 1.000 Euro
+
+	Belastung nach Normadressat
+	a. Jährliche Belastung in 1.000 Euro nach
+· Rechtsnorm
+· Nach Referat
+· Nach Abteilung
+Aufgeteilt auf Bürgerinnen und Bürger, Verwaltung, weitere Vorgabe Wirtschaft
+
+	Zeitaufwand
+	a. Jährlicher Zeitaufwand in Stunden nach
+· Rechtsnorm
+· Nach Referat
+· Nach Abteilung
+b. Jährlicher Zeitaufwand in Stunden in% nach Referat
+c. Tabelle mit Informationen zu
+· Rechtsnorm
+· Paragraf
+· Bezeichnung der Vorgabe
+· Jährlicher Zeitaufwand in Stunden
+
+	Informationspflichten
+	a. Jährliche Belastung in 1.000 Euro nach
+· Rechtsnorm
+· Nach Referat
+· Nach Abteilung
+b. Jährliche Belastung in 1.000 Euro in % nach Referat
+c. Tabelle mit Informationen zu
+· Rechtsnorm
+· Paragraf
+· Bezeichnung der Vorgabe
+
+	Glossar
+	Zentrale Begriffserklärungen aus der OnDEA-Datenbank.
+
+
+
+
+[bookmark: _Toc221646840]Datenaktualisierung
+1. Die neue Datei wird am gleichen Ort wie die bisherige Datei abgelegt und überschreibt diese Datei. Dabei muss folgendes beachtet werden:
+a. Die Datei muss den gleichen Namen haben
+b. Die Struktur innerhalb der Datei muss exakt der Struktur der bisherigen Datei entsprechen
+c. Das heißt, dass die Tabellenblätter in Excel identisch benannt sein müssen und
+d. Die Spaltennamen übereinstimmen müssen.
+2. PowerBI Datei öffnen
+3. Im oberen Reiter die Schaltfläche "Aktualisieren" auswählen. Alle Daten werden so nacheinander aktualisiert
+Abbildung 4: 
+[image: ]
+4. Nach Abspeichern der PowerBI-Datei kann die Anwendung geschlossen werden.
+
+[bookmark: _Toc221646841]Filter
+PowerBI erlaubt eine dynamische Filterung durch Grafiken. Daten werden interaktiv gefiltert, indem man auf Elemente von Diagrammen klickt (beispielsweise indem man auf eine bestimmte Kategorie in einem Balkendiagramm klickt). Dadurch setzt man intuitiv einen temporären Filter. 
+Die Filterung kann wieder aufgehoben werden indem man die Kategorie erneut anklickt. Außerdem können wir Filter über einen Button in der oberen rechten Ecke auf jeder Datenseite zurückgesetzt werden (Mausklick bei gleichzeitig gedrückter Strg-Taste). 
+Abbildung 5: Filter entfernen
+[image: ]
+
+[bookmark: _Toc221646842]Daten aus PowerBI-Dashboard
+Daten exportieren
+PowerBI erlaubt, Daten aus Visualisierungen zu kopieren bzw. zu exportieren. Die ausgewählten Daten werden als Tabelle im .csv-Format exportiert und gespeichert. Um die Daten in das gewohnte Tabellenformat mit Gitterlinien zu transformieren (um es z.B. in einer Email, einem Text-Dokument oder für die gewohnte Tabellenverarbeitung weiter zu nutzen), benötigt es folgende Zwischenschritte:
+1. Daten auswählen und exportieren
+a. Optional: Daten für gewünschten Zweck in der Visualisierung filtern (s.o.) 
+b. Weitere Optionen „…“ in der oberen rechten Ecke der Visualisierung anklicken
+c. Im Menü „Daten exportieren“ auswählen, es öffnet sich ein neues Fenster
+2. Export-Datei speichern: Datei an gewünschtem Ort und unter gewünschtem Namen speichern
+3. Exportierte .csv-Datei in Tabellenformat mit UTF-8 transformieren
+a. Datei am Speicherort mit Tabellenprogramm (z. B. Excel) öffnen.
+b. Erste Spalte als Ganzes markieren
+c. Im Menü „Daten“ die Schaltfläche „Text in Spalten“ anklicken, der „Textkonvertierungsassistent“ öffnet sich in einem neuen Fenster
+· Schritt 1: „Getrennt“ auswählen, „Weiter“ klicken
+· Schritt2: „Komma“ auswählen, „Weiter“ klicken
+· Schritt 3: Voreinstellungen belassen, „Fertig stellen“ klicken
+d. Die Daten erscheinen nun im gewohnten Tabellenformat
+4. Gewünschte Datenzellen in der Tabelle auswählen, kopieren und an anderem Ort einfügen
+Exkurs .csv-Dateiformat: Dieses Format ist für die maschinelle Datenverarbeitung optimal: Alle Daten eines Datensatzes (Zeilen) werden in einer Zeile fortgeschrieben und durch ein definiertes Zeichen (oft ein Komma, „csv“ steht für „comma separated values“) für das Tabellenprogramm voneinander getrennt.  
+Das vordefinierte Zeichen (sprich Komma, Semikolon, Punkt, o.ä.) ermöglicht unter anderem einen einfacheren Austausch von Daten zwischen verschiedenen Datenverarbeitungsprogrammen und die Dateigröße wird stark reduziert, was bei großen Datensätzen mit vielen Zeilen die Datenhaltung und Verarbeitung überhaupt erst ermöglicht.
+UTF-8 ist ein platzsparender, internationaler Standard der Zeichenkodierung und sorgt dafür, dass alle Zeichen in der Datei überall richtig angezeigt werden und keine Fragezeichen oder unbekannte Symbole angezeigt werden.
+
+ÄnderungenAbbildung 6: Änderungen
+
+[image: ]Einfache Änderungen wie das Anpassen von Titeln können Sie selber vornehmen
+Titel
+1. Klicken Sie die betreffende Grafik an. Es erscheint ein dünner Rahmen um die Grafik 
+2. Im Panel Visualisierungen auf der rechten Seite klicken sie auf das Visual formatieren Icon (Pinsel mit Balkendiagramm)
+3. Klicken Sie dort auf Allgemein
+4. Unter Titel können Sie den Text anpassen
+
+[bookmark: _Toc221646844]PowerBI Berichtsserver
+Erstmaliges Abspeichern:
+1. Unter Datei -> Speichern unter -> PowerBI Berichtsserver auswählen. Es erscheint ein Pop-up Fenster, dass Sie auffordert, die Adresse des Berichtsservers einzugeben. 
+2. Geben Sie folgende Adresse ein:
+3. Navigieren Sie im Fenster durch Doppelklick auf den Ordner „Referat R1“ und drücken Sie auf Speichern.
+4. Die Datei kann nun über den Berichtsserver aufgerufen werden.
+Aktualisierungen
+Veränderungen nehmen Sie bitte nur in der lokalen Version des Dashboards. Speichern Sie diese am besten einmal auf Ihrem lokalen Laufwerk und einmal im PBI Berichtsserver ab. Dazu gehen Sie vor wie im vorherigen Abschnitt aufgelistet.
+Rechte & Rollen
+Sie können weitere Nutzenden darauf berechtigen, das Dashboard auf dem Berichtsserver anzuschauen. Navigieren Sie dazu auf die Übersichtseite an den Speicherort des Berichts.
+1. Klicken Sie auf die drei Punkte hinter dem Dateinamen
+2. Klicken Sie auf Verwalten
+3. Navigieren Sie dort zum Punkt Sicherheit
+4. Unter rechte und Rollen klicken Sie auf neue Gruppe/neuen Benutzer hinzufügen
+5. Folgen Sie dem Schema der bereits vorhandenen Benutzer(gruppen)
+Wichtig
+Vergeben Sie die Rechte so restriktiv wie möglich, d.h. vergeben Sie an Leute außerhalb des Kernteams nur Leserechte (Rolle: Browser).
+
+
+
+[bookmark: _Toc221646845]Glossar
+[bookmark: _Toc221646846]Begriffserklärungen im Kontext Modernisierungsagenda
+Farblich hervorgehobene Zeilen kennzeichnen die zentralen Begriffe, welche auch im Dashboard selbst erklärt werden.
+[bookmark: _Ref221292985]Tabelle 7: Glossar Themenfeld „Modernisierungsagenda Bund“
+	Begriff
+	Bedeutung
+
+	Handlungsfelder
+	(Ebene 1: höchste Gliederungseinheit des Dokuments)
+Ordnen die Zielvorgaben des Koalitionsvertrages und bisher aufgegriffene Vorschläge aus der Zivilgesellschaft in fünf Fokusthemen (Ebene 1: höchste Struktureinheit des Dokuments). 
+Enthalten Vorhaben und zugehörige kurz-, mittel- und langfristige Maßnahmen, die für Bürgerinnen und Bürger, Unternehmen und Verwaltung zu spürbaren Verbesserungen führen werden.
+· Spürbarer Bürokratierückbau
+· Bessere Rechtsetzung
+· Bürger- und unternehmenszentrierter Service
+· Zukunftsgerichtete Personalentwicklung und Strategisches Personalmanagement
+· Effiziente Bundesverwaltung
+
+	Vorhaben
+	(Ebene 2: höchste Gliederungseinheit in Handlungsfeldern)
+
+
+	Maßnahmen
+	(Ebene 3: Operationalisierung der Vorhaben)
+Die Modernisierungsagenda beinhaltet 89 Einzelmaßnahmen, welche innerhalb der Legislaturperiode begonnen oder umgesetzt werden sollen.
+
+	Zielwerte
+	(Ebene 4: Erfolgskriterien für Maßnahmen)
+Beschreiben einen konkreten Kennwert oder Zustand, welcher erreicht werden soll. Geben einen gewünschten Zeitraum bis zur Erreichung oder Umsetzung an. 
+
+	Hebelprojekte
+	23 Maßnahmen, welche zwischen Ressort B und Ressorts abgestimmt wurden, und einen besonders herausgehobenen Beitrag zu den Zielen der Modernisierungsagenda und des Koalitionsvertrages leisten sollen. Sie:
+· führen zu direkten Verbesserungen für Bürgerinnen und Bürger sowie Unternehmen im Alltag,
+· entfalten Wirkung über mehrere Handlungsfelder hinweg, 
+· haben Vorbildfunktion für die Agenda und können skaliert, nachgenutzt oder übertragen werden.
+
+	Umsetzungsprojekte
+	[bookmark: _GoBack]Vorschlag Datenlabor Ressort A zur Benennung von im Ressort (bottom-up) geplanten Projekten und Lösungen, welche die (top-down) „Maßnahmen“ (Ebene 3 der Modernisierungsagenda) konkret umsetzen. 
+So können Vorgaben und Lösungsansätze logisch auseinandergehalten, gemessen und dokumentiert werden. 
+Mehrere Umsetzungsprojekte können auf eine Maßnahme einzahlen. 
+Beispiel: 
+· Maßnahme 1.1. „Prioritäre Bürokratierückbauvorhaben werden umgesetzt und Service- und Unterstützungsangebote zum Bürokratierückbau entwickelt“ 
+· Umsetzungsprojekte  A und B reduzieren die Kosten für Berichtspflichten um 5% und Umsetzungsprojekt C um 1%.
+· Umsetzungsprojekt 4 schafft eine Datenbank zu Service- und Unterstützungsangeboten.
+
+
+Quelle: Modernisierungsagenda Bund, eigene Bearbeitung
+
+[bookmark: _Toc221646847]Begriffserklärungen zu Erfüllungsaufwänden
+Stand: 04.02.2026; 
+Tabelle 8: Glossar Themenbefeld „Erfüllungsaufwände“
+	Begriff
+	Bedeutung
+
+	Aktualisierungsmessung
+	In regelmäßigen Abständen werden die in Kraft befindlichen Vorgaben aktualisiert. Da die Aktualisierungsmessung im Unterschied zur Validierungs- bzw. Nachmessung nicht die rechtlichen Änderungen, sondern ausschließlich konjunkturelle, inflationäre, erfüllungstechnische und ähnliche Änderungen für den entsprechenden "heutigen" Aktualisierungsstand abbilden soll, muss sich der Aktualisierungsdatensatz klar von allen anderen Datensätzen einer Vorgabe abgrenzen lassen. Die im Rahmen der Datenaktualisierung zu aktualisierenden Parameter (z. B. Prozesse, Lohnsatz, Kosten oder Fallzahl) können dann in den Aktualisierungsdatensatz übertragen werden. Diese Vorgehensweise stellt sicher, dass alle rechtlichen Vorgaben an die real existierenden Werte angepasst, über OnDEA öffentlich zugänglich gemacht und gleichzeitig die gesetzlich induzierten von den nicht-gesetzlich induzierten Veränderungen unterschieden werden können.
+
+Bisher wurden drei Aktualisierungen des Datenbestandes durchgeführt. Die zeitliche Einordnung der Aktualisierungsdatensätze erfolgt über den sogenannten Aktualisierungszeitpunkt, der als Datum des Inkrafttretens des entsprechenden Aktualisierungsdatensatzes eingesetzt wird: 
+· für die Datenaktualisierung 2012 ist dies der 01.01.2012; 
+· für die Datenaktualisierung 2018 der 31.12.2017 und 
+· für die Datenaktualisierung 2021 der 31.12.2021.
+
+Somit erhält der Aktualisierungsdatensatz als Datum des Inkrafttretens den jeweiligen festgelegten Aktualisierungszeitpunkt und wird darüber zeitlich in den Lebenslauf der Vorgabe eingefügt. Datensätze von Vorgaben, die nicht mehr in Kraft sind, müssen nicht aktualisiert werden. Für diese klare Abgrenzung erhält der Aktualisierungsdatensatz als Regelungsvorhabennummer die Kennung 'AKT_Jahr der Datenaktualisierung' und kann darüber in OnDEA gefiltert werden.
+
+	Bürokratiekosten
+	Die jährlichen Bürokratiekosten in Tsd. Euro geben den gesamten Aufwand an, der für die Wirtschaft zum Zweck der Erfüllung einer Informationspflicht pro Jahr entsteht. Die Bürokratiekosten bilden die Grundlage zur Berechnung des Bürokratiekostenindex und sind eine Teilmenge des Erfüllungsaufwands.
+
+	Datum der Vorgabe
+	Angabe des Datums, wann die rechtliche Vorgabe zuletzt geändert wurde.
+
+	Endadressat
+	Der Endadressat ist der Empfänger einer durch den Normadressaten zu übermittelnden Information. Bürgerinnen und Bürger, die Wirtschaft sowie die öffentliche Verwaltung können mögliche Endadressaten sein. Im Feld "Art des Endadressaten Verwaltung" werden die Endadressaten weiter untergliedert in beispielsweise Länder- und Bundesbehörden. Im Feld "Benennung des Endadressaten Verwaltung" wird ggf. der Name der Behörde aufgeführt, z.B. BVA, UBA...
+
+	Erfüllungsaufwand
+	Das umfassendste Maß für Bürokratie und Grundlage der Messungen ist der Erfüllungsaufwand. Dieser beinhaltet den Zeitaufwand und die Kosten, die den Bürgerinnen und Bürgern, der Wirtschaft und der öffentlichen Verwaltung durch die Befolgung einer gesetzlichen Vorgabe entstehen.
+
+Im Zuge der Einführung neuer rechtlicher Regelungen ist die Bundesregierung verpflichtet, den veränderten Erfüllungsaufwand zu ermitteln. In der Gesetzesfolgenabschätzung ist die Differenz des Erfüllungsaufwands ein wichtiger Indikator zur Beurteilung der Folgekosten für die Betroffenen. Der Nationale Normenkontrollrat als unabhängige Instanz prüft, ob das verantwortliche Ressort den Erfüllungsaufwand nachvollziehbar dargestellt hat.
+
+Es wird unterschieden zwischen der Differenz des Erfüllungsaufwands, dem jährlichen und dem einmaligen Erfüllungsaufwand.
+
+Die Differenz des Erfüllungsaufwands bezeichnet die jährliche Be- bzw. Entlastung in Tsd. Euro und setzt sich aus der Differenz der Personalkosten und der Differenz der Sachkosten zusammen. Die Differenz berechnet sich aus alter und neuer Belastung durch eine rechtliche Vorgabe.
+
+Der jährliche Erfüllungsaufwand in Tsd. Euro umfasst den gesamten Zeitaufwand und die Kosten, die beim Normadressaten durch die Befolgung einer bundesrechtlichen Vorschrift pro Jahr entstehen.
+
+Der einmalige Erfüllungsaufwand in Tsd. Euro setzt sich aus den einmaligen Personal- und den einmaligen Sachkosten zusammen.
+
+	Erhebungsinstrument
+	Das Erhebungsinstrument ist der Weg, mit dem die Zeiten und Kosten einer Vorgabe ermittelt werden. Sieben verschiedene Erhebungsinstrumente stehen für Messungen zur Verfügung: Telefoninterview, Vor-Ort-Interview, Expertengespräch, Simulation, Zeitwerttabelle, Schriftliche Befragung oder Expertenpanel. Welches Erhebungsinstrument im Einzelfall eingesetzt wird, hängt von der Art der Vorgabe ab.
+
+	Fallzahl
+	Die Fallzahl gibt an, wie oft pro Jahr eine Vorgabe erfüllt werden muss. Hierbei ist zu unterscheiden zwischen:
+
+Fallzahlen für periodisch zu erfüllende Vorgaben. Beispiel: jährliche Steuererklärung, zweijährliche Kfz-Hauptuntersuchung, monatliche Statistikmeldung und
+anlassbezogene Vorgaben, Beispiel: Antrag auf Baugenehmigung, Beschaffung und Anbringung eines Kfz-Kennzeichens.
+
+	Gemeinsame Geschäftsordnung der Bundesministerien
+	Die Gemeinsame Geschäftsordnung der Bundesministerien (GGO) regelt die Grundsätze für die Organisation der Bundesministerien, die Zusammenarbeit der Bundesministerien untereinander und mit den Verfassungsorganen sowie für den Geschäftsverkehr nach außen. Sie regelt die Mitwirkung bei der Rechtsetzung.
+
+	Gesetzgebungsebene
+	Die Regulierungsebene, die das Gesetz erlassen hat: nationales Recht, EU- und internationales Recht oder erweitertes EU- und internationales Recht.
+
+	Gültig ab
+	Filtert Vorgaben, die frühestens ab dem eingetragenen Datum gültig sind.
+
+	Historisierung
+	Klassifikationen zur Fortschreibung bzw. Neuaufnahme einer rechtlichen Vorgabe 
+· Neuaufnahme einer Vorgabe
+· Inhaltliche Änderung mit Rechtsänderung einer Vorgabe
+· Inhaltliche Änderung (ohne Rechtsänderung)/ Vereinfachung einer Vorgabe
+· Vorgabe tritt außer Kraft
+· Datenaktualisierung
+· Rein formelle Änderung einer Vorgabe
+
+	Identifikationsnummer
+	Eindeutige Kennzeichnung für die Version einer Vorgabe.
+
+	Informationspflicht
+	Informationspflichten sind alle Verpflichtungen, nach denen Daten und sonstige Informationen für Behörden oder Dritte zu beschaffen, verfügbar zu halten oder zu übermitteln sind.
+
+	Informationstransfer
+	Das Feld Informationstransfer gibt an, ob die Informationen vom Normadressaten mittelbar über einen Dritten oder unmittelbar an den Endadressaten erfolgen.
+
+	Inhaltsart
+	Inhaltsart ist ein grundlegender Filter auf OnDEA. Es wird zwischen Regelungsvorhaben, Vorgaben und Artikeln unterschieden. Nach Auswahl dieses Filters, werden weitere spezifische Filtermöglichkeiten angeboten.
+
+	Initiative zur Informationsübermittlung
+	Initiative zur Informationsübermittlung zeigt an, ob die Informationen vom Normadressaten unaufgefordert, nur auf Anfrage oder ggf. sowohl als auch an den Endadressaten übermittelt werden.
+
+	Kabinetttermin
+	Datum der Befassung des Bundeskabinetts mit dem Regelungsvorhaben.
+
+	Komplexität
+	Die Komplexität gibt an, mit welchem Schwierigkeitsgrad die Tätigkeit zur Erfüllung der Vorgabe bewertet ist. Die Komplexität kann die Ausprägungen "einfach", "mittel" oder "hoch" annehmen.
+
+	Kosten für die Beschaffung von Informations- und Kommunikationstechnik
+	Aufwendungen für die Beschaffung spezieller Informations- und Kommunikationstechniken (z.B. Neuanschaffung von Hardware), die durch die Erfüllung einer Vorgabe oder eines Prozesses unmittelbar für die Normadressaten anfallen.
+
+	Kosten für die Inanspruchnahme Dritter
+	Aufwendungen für die Inanspruchnahme Dritter (z.B. Handwerkerleistungen), die durch die Erfüllung einer Vorgabe oder eines Prozesses unmittelbar für die Normadressaten anfallen.
+
+	Kosten für die Nachrüstung von Anlagen
+	Aufwendungen für die Nachrüstung technischer Anlagen, die durch die Erfüllung einer Vorgabe oder eines Prozesses unmittelbar für die Normadressaten anfallen.
+
+	Kosten für Fortbildungen und Informationsmaterial für Dritte
+	Anfallende externe Fortbildungskosten und Aufwendungen für Informationsmaterial, die durch die Erfüllung einer Vorgabe oder eines Prozesses unmittelbar für die Normadressaten anfallen.
+
+	Kosten für Sachmittel (z.B. Büromaterial, Porto)
+	Aufwendungen für Sachmittel, die durch die Erfüllung einer Vorgabe oder eines Prozesses unmittelbar für die Normadressaten anfallen.
+
+	Kosten für sonstige Anschaffungen
+	Aufwendungen für alle sonstigen Anschaffungen, die durch die Erfüllung einer Vorgabe oder eines Prozesses unmittelbar für die Normadressaten anfallen.
+
+	Kosten für Wartung
+	Aufwendungen für die Wartung von Geräten oder Anlagen, die durch die Erfüllung einer Vorgabe oder eines Prozesses unmittelbar für die Normadressaten anfallen.
+
+	Lohnsatz
+	Für die Berechnung der Personalkosten des Normadressaten Wirtschaft wird die Lohnkostentabelle der Wirtschaft herangezogen. Diese definiert je nach Branche (Wirtschaftszweigklassifikation 2008) und drei Qualifikationsniveaus (niedrig, mittel, hoch) die Lohnkosten pro Stunde. Die Personalkosten des Normadressaten Verwaltung werden der Tariflohntabelle entnommen. Diese definiert nach Hierarchieebene (Bund, Land, Kommune) sowie Qualifikationsniveau (einfacher, mittlerer, gehobener sowie höherer Dienst) die Lohnkosten pro Stunde.
+
+	Nachmessung
+	Zwei Jahre nach Inkrafttreten der Vorgaben eines Regelungsvorhabens werden die ermittelten Angaben (Schätzung) vom Statistischen Bundesamt in der Regel mittels einer Nachmessung validiert. Ob eine Vorgabe bereits nachgemessen wurde ist bei jeder Vorgabe in der Expertenansicht unter der Rubrik "Zusatzinformationen - Beruhen die Ergebnisse auf einer Schätzung?" zu erkennen.
+
+	Nationaler Normenkontrollrat
+	Der Nationale Normenkontrollrat ist ein Gremium, das die Aufgabe hat, die Bundesregierung bei der Umsetzung ihrer Maßnahmen auf den Gebieten des Bürokratieabbaus und der besseren Rechtsetzung zu unterstützen.
+
+	Normadressat
+	Wer eine rechtliche Vorgabe erfüllen muss, ist Normadressat.
+Zu den Normadressaten zählen: Bürgerinnen und Bürger, Wirtschaft sowie die öffentliche Verwaltung. 
+Vorgaben, die sich an natürliche Personen richten, betreffen den Normadressaten "Bürger".
+Jede Einheit, die eine wirtschaftliche Tätigkeit im Privatsektor ausübt, fällt unter den Normadressaten "Wirtschaft". Hierunter fallen auch karitative sowie ehrenamtliche Organisationen.
+Als öffentliche Verwaltung gelten die mit der Wahrnehmung von Verwaltungsaufgaben betrauten Verwaltungsträger (rechtsfähige Körperschaften, Anstalten und Stiftungen des öffentlichen Rechts einschließlich Beliehene im Rahmen der ihnen übertragenen hoheitlichen Kompetenzen).
+Rechtliche Vorgaben können auch mehrere Normadressaten gleichzeitig betreffen.
+
+	Online-Übermittlung
+	Die Datenfelder zur Online-Übermittlung beschreiben, ob die durch den Normadressaten zu bearbeitenden Unterlagen online verfügbar sind, ob eine Übermittlung von Informationen über das Internet in der Praxis möglich ist oder ob die Online-Übermittlung verpflichtend geregelt ist.
+
+	Periodizität
+	Die Periodizität gibt an, wie häufig eine Vorgabe pro Jahr durch einen Normadressaten erfüllt werden muss.
+
+	Personalkosten
+	Die jährlichen Personalkosten in Tsd. Euro umfassen den gesamten Personalaufwand, der den Normadressaten Wirtschaft und Verwaltung durch die Befolgung einer Vorgabe pro Jahr entstehen. Für die Berechnung der Personalkosten wird der zu erwartende Zeitaufwand mit dem jeweiligen Lohnsatz multipliziert.
+
+	Federführendes Ressort
+	Das hauptverantwortliche Ressort für die Erarbeitung eines Regelungsvorhabens.
+
+	Rechtsnorm
+	Die Rechtsnorm gibt die gesetzliche Grundlage an. Es wird unterschieden zwischen: Gesetz, Verordnung, Verwaltungsvorschrift oder EU-Verordnung.
+
+	Regelungsvorhaben
+	Regelungsvorhaben sind Änderungen der Rechtsnorm, die eine ohne mehrere Vorgaben enthalten. Zu den Regelungsvorhaben zählen alle Entwürfe von Rechts- und Verwaltungsvorschriften, die nach den §§ 44, 62 Absatz 2 und 70 Absatz 1 der Gemeinsamen Geschäftsordnung der Bundesministerien (GGO) mit einer Gesetzesfolgenabschätzung zu versehen sind. Wesentliches - aber nicht alleiniges - Kriterium für eine Beteiligung des Kontrollrat an der Ressortabstimmung ist damit die Vorlage im Kabinett. Nach § 4 Abs. 1 NKRG kann der Kontrollrat darüber hinaus auch die Vorlage anderer Entwürfe fordern.
+
+	Regelungsvorhabennummer
+	Eindeutige Kennzeichnung für die Version eines Regelungsvorhabens.
+
+	Ressort
+	Geschäftsbereich des Bundes; für eine rechtliche Vorgabe zuständiges Bundesministerium.
+
+	Sachkosten
+	Die jährlichen Sachkosten in Tsd. Euro bilden die Gesamtheit der Sachausgaben ab, die bei den Normadressaten pro Jahr für die Befolgung einer Vorgabe anfallen.
+
+	Spiegelvorgaben
+	Eine Vorgabe, die bei den Normadressaten Bürgerinnen und Bürger oder Unternehmen eine Änderung des Erfüllungsaufwands verursacht, kann eine spiegelbildliche Änderung beim Normadressaten Verwaltung auslösen und umgekehrt. Insbesondere bei Antragsverfahren kommt es zu derartigen Spiegelvorgaben mit in der Regel gleichen Fallzahlen auf beiden Seiten.
+
+	Standardaktivitäten
+	Auflistung von allgemeinen Tätigkeiten zur Erfüllung von Informationspflichten, Vorgaben oder Prozessen.
+
+	Themenbereich
+	Inhaltliche und politische Zuordnung der rechtlichen Vorgabe.
+
+	Unternehmensgrößenklasse
+	Bestimmung der Unternehmensgröße auf Basis der Beschäftigtenanzahl zur Lohnsatzselektion der Wirtschaft: "bis 49", "50 bis 249", "250 und mehr" sowie "übergreifend".
+
+	Vorgabe
+	Vorgaben sind Einzelregelungen, die bei den Normadressaten unmittelbar zur Änderung von Kosten, Zeitaufwand oder beidem führen. Sie ergeben sich aus bundesrechtlichen Regelungen und veranlassen die Normadressaten, bestimmte Ziele oder Anordnungen zu erfüllen oder bestimmte Handlungen zu unterlassen.
+
+Die Art der Vorgabe gibt an, um welche Vorgabe es sich handelt und an welchen Normadressaten sie sich richtet. Hier gibt es vier mögliche Ausprägungen:
+· Wirtschaft-Informationspflicht
+· Wirtschaft-Weitere Vorgabe
+· Bürger-Vorgabe
+· Verwaltung-Vorgabe
+
+Hierbei können Vorgaben noch weiter differenziert werden. So kann eine Vorgabe neben einer Informationspflicht auch eine Anordnung (z.B. der Einbau von Feuerschutztüren), eine Antragsbearbeitung, die Bereitstellung von Informationen, eine Überwachung, eine Unterlassung (z.B. FCKW-Verbot) sowie eine bestimmte Zielerreichung (z.B. die Einhaltung von Grenzwerten) beinhalten.
+
+	Vorgabennummer
+	Kennzeichner der Vorgabe. Alternativ Identifikationsnummer.
+
+	Klassifikation der Wirtschaftszweige, Ausgabe 2003
+	Die Klassifikation der Wirtschaftszweige dient dazu, die wirtschaftlichen Tätigkeiten von Unternehmen, Betrieben und anderen statistischen Einheiten in allen amtlichen Statistiken einheitlich zu erfassen.
+
+Verbindliche Wirtschaftszweigklassifikationen sind die Grundlage für die Erstellung von amtlichen Statistiken im Bereich Wirtschaft, um die Daten sinnvoll einordnen und analysieren zu können. Die Klassifikation der Wirtschaftszweige beschreibt bei einer Informationspflicht bzw. rechtlichen Vorgabe, welchem Wirtschaftszweig der Normadressat "Wirtschaft" zugeordnet ist, d.h. welche Branche durch die Vorgabe belastet wird.
+
+Weitere Informationen finden Sie auf den Seiten des Statistischen Bundesamtes.
+
+	Klassifikation der Wirtschaftszweige, Ausgabe 2008
+	Die Klassifikation der Wirtschaftszweige wurde 2008 teils umfassend umstrukturiert, um Änderungen internationaler Referenzklassifikationen im Rahmen einer weiter fortschreitenden internationalen Harmonisierung von Wirtschaftsklassifikationen zu berücksichtigen.
+
+Weitere Informationen finden Sie auf den Seiten des Statistischen Bundesamtes.
+
+	Wartezeiten (in der Behörde)
+	Die jährlichen Wartezeiten in der Behörde bilden die Dauer in Minuten ab, die den Normadressaten pro Jahr für die Befolgung einer rechtlichen Vorgabe für das Erreichen der Behörde bis zum Amtsgeschäft anfallen.
+
+	Wegezeiten (zur Behörde)
+	Die jährlichen Wegezeiten zur Behörde bilden den Zeitaufwand in Minuten ab, der den Normadressaten pro Jahr für das Befolgen einer Vorgabe anfällt, um vom Wohnort bzw. Sitz des Normadressaten zur zuständigen Behörde zu gelangen.
+
+	Wirtschaftszweig
+	Die Klassifikation der Wirtschaftszweige dient dazu, die wirtschaftlichen Tätigkeiten von Unternehmen, Betrieben und anderen statistischen Einheiten in allen amtlichen Statistiken einheitlich zu erfassen.
+
+Verbindliche Wirtschaftszweigklassifikationen sind die Grundlage für die Erstellung von amtlichen Statistiken im Bereich Wirtschaft, um die Daten sinnvoll einordnen und analysieren zu können. Die Klassifikation der Wirtschaftszweige beschreibt bei Vorgaben, welchem Wirtschaftszweig der Normadressat "Wirtschaft" zugeordnet ist, d.h. welche Branche durch die Vorgabe belastet wird.
+
+	Zeitaufwand
+	Gesamtheit der Zeit in Stunden bzw. Minuten pro Jahr, die insgesamt für die Befolgung der rechtlichen Vorgabe aufgewendet werden muss. Wege- und Wartezeiten sind inbegriffen.
+
+
+Quelle: ondea.com / StBA Gruppe I2
+image3.png
+
+image4.png
+
+image5.png
+
+image6.png
+
+image7.png
+
+image8.png
+
+image1.jpeg
+
+image2.png
+
