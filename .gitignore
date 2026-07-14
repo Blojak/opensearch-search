@@ -12,3 +12,5 @@ sample_docs/*.pdf
 !.gitignore
 !.env.example
 opensearch-bruno
+
+archive
