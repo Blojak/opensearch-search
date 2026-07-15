@@ -12,3 +12,6 @@ sample_docs/*.pdf
 !.gitignore
 !.env.example
 opensearch-bruno
+
+# local scratch: pre-anonymization copies and other throwaways
+archive
