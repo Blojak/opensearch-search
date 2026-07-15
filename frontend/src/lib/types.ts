@@ -37,6 +37,16 @@ export interface HitDocument {
   mime_type: string | null
   created_at: string
   version_number: number
+  /** Storage location of the original document (documents.s3_object_key). */
+  s3_object_key: string | null
+}
+
+/** The chunk shown inside the surrounding body text (for semantic hits). */
+export interface HitContext {
+  text: string
+  /** Offsets of the chunk within `text`, so the chunk can be highlighted. */
+  hit_start: number
+  hit_end: number
 }
 
 export interface SearchHit {
@@ -51,6 +61,8 @@ export interface SearchHit {
   /** `<em>`-wrapped fragments from OpenSearch; empty for pure semantic hits. */
   highlights: string[]
   document: HitDocument
+  /** Body-context window; present when the search was asked to attach it. */
+  context: HitContext | null
 }
 
 export interface SearchResponse {

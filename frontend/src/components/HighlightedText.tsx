@@ -35,3 +35,29 @@ export function HighlightedText({ fragment }: { fragment: string }) {
 
   return <>{nodes}</>
 }
+
+/**
+ * Renders `text` with the `[start, end)` slice marked — used for semantic hits,
+ * where there are no term highlights but we want to show the whole chunk
+ * standing out inside its surrounding body context. Offsets come from the
+ * backend (`context.hit_start` / `hit_end`); the surrounding text stays dimmed.
+ */
+export function PassageText({
+  text,
+  start,
+  end,
+}: {
+  text: string
+  start: number
+  end: number
+}) {
+  return (
+    <>
+      {text.slice(0, start)}
+      <mark className="rounded bg-primary/15 px-0.5 text-foreground">
+        {text.slice(start, end)}
+      </mark>
+      {text.slice(end)}
+    </>
+  )
+}
