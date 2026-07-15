@@ -2,6 +2,7 @@ import { FolderOpen } from 'lucide-react'
 import type { SearchHit } from '@/lib/types'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
+import { CopyButton } from './CopyButton'
 import { HighlightedText, PassageText } from './HighlightedText'
 
 function formatDate(iso: string): string {
@@ -55,7 +56,7 @@ export function ResultCard({ hit }: { hit: SearchHit }) {
         )}
       </CardContent>
       {doc.s3_object_key && (
-        <CardFooter className="justify-end">
+        <CardFooter className="justify-end gap-1">
           <span
             className="flex items-center gap-1.5 font-mono text-xs text-muted-foreground"
             title="Ablageort des Dokuments"
@@ -63,6 +64,7 @@ export function ResultCard({ hit }: { hit: SearchHit }) {
             <FolderOpen className="size-3.5 shrink-0" />
             {doc.s3_object_key}
           </span>
+          <CopyButton value={doc.s3_object_key} label="Ablageort kopieren" />
         </CardFooter>
       )}
     </Card>
