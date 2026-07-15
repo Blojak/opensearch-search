@@ -3,6 +3,7 @@ import { Filters } from '@/components/Filters'
 import { ModeToggle } from '@/components/ModeToggle'
 import { ResultList } from '@/components/ResultList'
 import { SearchBar } from '@/components/SearchBar'
+import { ThemeToggle } from '@/components/ThemeToggle'
 import { useSearch } from '@/lib/useSearch'
 import type { SearchMode } from '@/lib/types'
 
@@ -42,11 +43,14 @@ export default function App() {
 
   return (
     <div className="mx-auto min-h-screen max-w-3xl px-4 py-10">
-      <header className="mb-8">
-        <h1 className="text-2xl font-semibold tracking-tight">Dokumentensuche</h1>
-        <p className="text-sm text-muted-foreground">
-          Semantische, lexikalische und hybride Suche über die indexierten Dokumente.
-        </p>
+      <header className="mb-8 flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Dokumentensuche</h1>
+          <p className="text-sm text-muted-foreground">
+            Semantische, lexikalische und hybride Suche über die indexierten Dokumente.
+          </p>
+        </div>
+        <ThemeToggle />
       </header>
 
       <section className="mb-8 space-y-4">
