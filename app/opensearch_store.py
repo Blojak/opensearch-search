@@ -38,6 +38,7 @@ FIELD_KLASSIFIZIERUNG = "klassifizierung"
 FIELD_LANGUAGE = "language"  # auto-detected at ingest (ISO-639-1 subset)
 FIELD_MIME_TYPE = "mime_type"
 FIELD_CREATED_AT = "created_at"  # documents.created_at
+FIELD_S3_OBJECT_KEY = "s3_object_key"  # storage location, shown with a hit
 
 
 @lru_cache(maxsize=1)
@@ -93,6 +94,7 @@ def _index_body() -> dict:
                 FIELD_LANGUAGE: {"type": "keyword"},
                 FIELD_MIME_TYPE: {"type": "keyword"},
                 FIELD_CREATED_AT: {"type": "date"},
+                FIELD_S3_OBJECT_KEY: {"type": "keyword"},
             }
         },
     }

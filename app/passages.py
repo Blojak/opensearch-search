@@ -9,9 +9,13 @@ of truth), so the window is sliced from there using the character offsets the
 search returned. ``hit_start`` / ``hit_end`` locate the hit *inside* the
 returned window, which is what lets the UI highlight it.
 
-Computing this for every search result would mean one extra database read per
-hit, so it is deliberately not part of the search response — the UI fetches it
-on demand when a hit is opened.
+Two callers share the ``passage_window`` arithmetic: ``extract_passage`` reads a
+single version for the detail view (``GET /documents/<id>/passage``), and the
+search adds a smaller window (``SEARCH_CONTEXT_CHARS``) to every hit so a
+semantic result — which has no term highlights — can still be read in context.
+The naive worry was one extra read per hit; the search avoids it by reading each
+distinct version body once and reusing it across its hits (see
+``app.search._attach_context``).
 """
 
 from __future__ import annotations
@@ -24,6 +28,10 @@ from app.models import DocumentVersion
 
 # Characters of context to include on each side of the hit by default.
 DEFAULT_CONTEXT_CHARS = 200
+
+# A smaller window attached to every search hit, so a semantic hit can be read
+# in context inline in the result list without opening the detail view.
+SEARCH_CONTEXT_CHARS = 150
 
 
 @dataclass(frozen=True)
