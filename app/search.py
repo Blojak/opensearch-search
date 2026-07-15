@@ -20,11 +20,14 @@ import uuid
 from dataclasses import dataclass
 from datetime import datetime
 
+from sqlalchemy import tuple_
+
 from app.config import get_settings
 from app.db import session_scope
 from app.embedding import embed_query
 from app.filters import SearchFilters
 from app.models import Document, DocumentVersion
+from app.passages import passage_window
 from app.opensearch_store import (
     FIELD_AKTENZEICHEN,
     FIELD_CHUNK_INDEX,
@@ -35,6 +38,7 @@ from app.opensearch_store import (
     FIELD_KLASSIFIZIERUNG,
     FIELD_LANGUAGE,
     FIELD_MIME_TYPE,
+    FIELD_S3_OBJECT_KEY,
     FIELD_START_CHAR,
     FIELD_TEXT,
     FIELD_VERFAHREN_ID,
@@ -64,6 +68,11 @@ class SearchHit:
     end_char: int | None  # / highlighting the exact passage)
     highlights: list[str]  # <em>-wrapped fragments (native OpenSearch highlight)
     document: dict
+    # The chunk shown inside the surrounding body text, so a semantic hit (which
+    # has no term highlights) can still be read in context. ``None`` unless the
+    # caller asked for it. ``{"text", "hit_start", "hit_end"}`` — the last two
+    # locate the chunk inside ``text``.
+    context: dict | None = None
 
 
 # Document-level metadata mirrored on every chunk (returned to the caller).
@@ -75,6 +84,7 @@ _META_FIELDS = (
     FIELD_MIME_TYPE,
     FIELD_CREATED_AT,
     FIELD_VERSION_NUMBER,
+    FIELD_S3_OBJECT_KEY,
 )
 
 _HIGHLIGHT = {
@@ -146,13 +156,65 @@ def _hit_from_response(raw: dict) -> SearchHit:
     )
 
 
+def _attach_context(hits: list[SearchHit], context_chars: int) -> None:
+    """Attach a body-context window to each hit, in place.
+
+    Reads the body once per distinct ``(document_id, version_number)`` — not per
+    hit — and slices the window locally with ``passage_window``. That batched
+    read is what keeps this cheap enough to do on every search: several hits from
+    the same document share a single Postgres row.
+    """
+    pairs = {
+        (uuid.UUID(h.document_id), h.version_number)
+        for h in hits
+        if h.start_char is not None and h.end_char is not None
+    }
+    if not pairs:
+        return
+
+    with session_scope() as session:
+        rows = (
+            session.query(
+                DocumentVersion.document_id,
+                DocumentVersion.version_number,
+                DocumentVersion.body_text,
+            )
+            .filter(
+                tuple_(
+                    DocumentVersion.document_id, DocumentVersion.version_number
+                ).in_(list(pairs))
+            )
+            .all()
+        )
+    bodies = {(str(doc_id), vnum): body for doc_id, vnum, body in rows}
+
+    for hit in hits:
+        if hit.start_char is None or hit.end_char is None:
+            continue
+        body = bodies.get((hit.document_id, hit.version_number))
+        if body is None:
+            continue
+        passage = passage_window(body, hit.start_char, hit.end_char, context_chars)
+        hit.context = {
+            "text": passage.text,
+            "hit_start": passage.hit_start,
+            "hit_end": passage.hit_end,
+        }
+
+
 def search(
     query: str,
     mode: SearchMode = SearchMode.HYBRID,
     filters: SearchFilters | None = None,
     limit: int = 10,
+    context_chars: int = 0,
 ) -> list[SearchHit]:
-    """Run a search in the requested mode and return enriched chunk hits."""
+    """Run a search in the requested mode and return enriched chunk hits.
+
+    When ``context_chars > 0`` each hit also carries a ``context`` window: the
+    chunk shown inside that many characters of surrounding body text, so a
+    semantic hit can be read in context even though it has no term highlights.
+    """
     settings = get_settings()
     client = get_client()
     clauses = _filter_clauses(filters)
@@ -185,7 +247,10 @@ def search(
     response = client.search(
         index=settings.opensearch_index, body=body, params=params
     )
-    return [_hit_from_response(h) for h in response["hits"]["hits"]]
+    hits = [_hit_from_response(h) for h in response["hits"]["hits"]]
+    if context_chars > 0:
+        _attach_context(hits, context_chars)
+    return hits
 
 
 def _document_chunks(client, document_id: uuid.UUID, version_number: int) -> list[dict]:

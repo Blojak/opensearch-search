@@ -40,7 +40,7 @@ from app.ingestion import (
 )
 from app.openapi import SWAGGER_TEMPLATE
 from app.opensearch_store import ensure_setup
-from app.passages import DEFAULT_CONTEXT_CHARS, extract_passage
+from app.passages import DEFAULT_CONTEXT_CHARS, SEARCH_CONTEXT_CHARS, extract_passage
 from app.query_log import log_search
 from app.search import SearchFilters, SearchMode, get_document, search
 from app.users import upsert_user
@@ -534,7 +534,13 @@ def create_app() -> Flask:
             created_to=_parse_dt(raw_filters.get("created_to"), "created_to"),
         )
 
-        hits = search(query, mode=mode, filters=filters, limit=limit)
+        hits = search(
+            query,
+            mode=mode,
+            filters=filters,
+            limit=limit,
+            context_chars=SEARCH_CONTEXT_CHARS,
+        )
         results = [
             {
                 "score": hit.score,
@@ -546,6 +552,7 @@ def create_app() -> Flask:
                 "end_char": hit.end_char,
                 "highlights": hit.highlights,
                 "document": hit.document,
+                "context": hit.context,
             }
             for hit in hits
         ]
