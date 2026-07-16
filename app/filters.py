@@ -21,5 +21,9 @@ class SearchFilters:
     verfahren_id: str | None = None
     klassifizierung: str | None = None
     language: str | None = None
+    # Document type = MIME type. A list, because one user-facing type can map to
+    # several MIME types (e.g. "Word" = the old and the OOXML format); matched
+    # with an OR (``terms``).
+    mime_type: list[str] | None = None
     created_from: datetime | None = None
     created_to: datetime | None = None

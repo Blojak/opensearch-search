@@ -134,6 +134,14 @@ SWAGGER_TEMPLATE = {
                     "type": "string",
                     "enum": [member.value for member in Language],
                 },
+                "mime_type": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": (
+                        "Document type = MIME type(s); OR-matched. A bare string "
+                        "is also accepted. E.g. ['application/pdf']."
+                    ),
+                },
                 "created_from": {"type": "string", "format": "date-time"},
                 "created_to": {"type": "string", "format": "date-time"},
             },

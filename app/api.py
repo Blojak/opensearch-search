@@ -122,6 +122,21 @@ def _parse_int(value: Any, field: str, minimum: int | None = None) -> int:
     return parsed
 
 
+def _parse_str_list(value: Any, field: str) -> list[str] | None:
+    """Parse a string or list of strings into a list, or None. Raises on other types.
+
+    Accepts a bare string (wrapped into a one-element list) for convenience, so a
+    client can send ``"application/pdf"`` or ``["application/pdf", ...]``.
+    """
+    if value is None:
+        return None
+    if isinstance(value, str):
+        return [value] if value else None
+    if isinstance(value, list) and all(isinstance(v, str) for v in value):
+        return value or None
+    raise ApiError(f"invalid {field}: expected a string or list of strings")
+
+
 def _parse_uuid(value: Any, field: str) -> uuid.UUID | None:
     """Parse a string into a UUID or raise ApiError(400)."""
     if value is None:
@@ -530,6 +545,7 @@ def create_app() -> Flask:
             verfahren_id=raw_filters.get("verfahren_id"),
             klassifizierung=raw_filters.get("klassifizierung"),
             language=filter_language.value if filter_language else None,
+            mime_type=_parse_str_list(raw_filters.get("mime_type"), "mime_type"),
             created_from=_parse_dt(raw_filters.get("created_from"), "created_from"),
             created_to=_parse_dt(raw_filters.get("created_to"), "created_to"),
         )
