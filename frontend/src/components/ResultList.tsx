@@ -1,7 +1,8 @@
 import { AlertCircle, FileSearch } from 'lucide-react'
-import type { SearchResponse } from '@/lib/types'
+import type { SearchHit, SearchResponse } from '@/lib/types'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Skeleton } from '@/components/ui/skeleton'
+import { DocumentGroupCard } from './DocumentGroupCard'
 import { ResultCard } from './ResultCard'
 
 export type SearchState =
@@ -9,6 +10,18 @@ export type SearchState =
   | { status: 'loading' }
   | { status: 'error'; message: string; isAuth: boolean }
   | { status: 'success'; data: SearchResponse }
+
+/** Group chunk hits by document, keeping the (score-ranked) order of first
+ * appearance. Each group's first hit is therefore the document's best chunk. */
+function groupByDocument(hits: SearchHit[]): SearchHit[][] {
+  const groups = new Map<string, SearchHit[]>()
+  for (const hit of hits) {
+    const existing = groups.get(hit.document_id)
+    if (existing) existing.push(hit)
+    else groups.set(hit.document_id, [hit])
+  }
+  return [...groups.values()]
+}
 
 function LoadingSkeleton() {
   return (
@@ -34,7 +47,7 @@ function Empty({ icon, title, hint }: { icon: React.ReactNode; title: string; hi
   )
 }
 
-export function ResultList({ state }: { state: SearchState }) {
+export function ResultList({ state, grouped }: { state: SearchState; grouped: boolean }) {
   if (state.status === 'idle') {
     return (
       <Empty
@@ -67,6 +80,21 @@ export function ResultList({ state }: { state: SearchState }) {
         title="Keine Treffer"
         hint="Versuchen Sie einen anderen Begriff, einen anderen Modus oder entfernen Sie den Filter."
       />
+    )
+  }
+
+  if (grouped) {
+    const documents = groupByDocument(data.results)
+    return (
+      <div className="space-y-3">
+        <p className="text-sm text-muted-foreground">
+          {documents.length} {documents.length === 1 ? 'Dokument' : 'Dokumente'} ·{' '}
+          {data.count} {data.count === 1 ? 'Treffer' : 'Treffer'} · Modus {data.mode}
+        </p>
+        {documents.map((hits) => (
+          <DocumentGroupCard key={hits[0].document_id} hits={hits} />
+        ))}
+      </div>
     )
   }
 

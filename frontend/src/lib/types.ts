@@ -16,6 +16,8 @@ export interface SearchFilters {
   aktenzeichen?: string
   verfahren_id?: string
   language?: string
+  /** Document type = MIME type(s), OR-matched. */
+  mime_type?: string[]
   created_from?: string // ISO-8601
   created_to?: string // ISO-8601
 }

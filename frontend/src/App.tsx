@@ -1,9 +1,12 @@
 import { useState } from 'react'
+import { Layers } from 'lucide-react'
 import { Filters } from '@/components/Filters'
+import { EMPTY_FILTERS, toSearchFilters, type FilterState } from '@/lib/filters'
 import { ModeToggle } from '@/components/ModeToggle'
 import { ResultList } from '@/components/ResultList'
 import { SearchBar } from '@/components/SearchBar'
 import { ThemeToggle } from '@/components/ThemeToggle'
+import { Button } from '@/components/ui/button'
 import { useSearch } from '@/lib/useSearch'
 import type { SearchMode } from '@/lib/types'
 
@@ -12,18 +15,18 @@ const RESULT_LIMIT = 20
 export default function App() {
   const [query, setQuery] = useState('')
   const [mode, setMode] = useState<SearchMode>('semantic')
-  const [klassifizierung, setKlassifizierung] = useState('')
+  const [filters, setFilters] = useState<FilterState>(EMPTY_FILTERS)
+  const [grouped, setGrouped] = useState(false)
   // The query behind the current results, so a mode switch can re-run it.
   const [submittedQuery, setSubmittedQuery] = useState('')
   const { state, run } = useSearch()
 
   function runSearch(q: string, searchMode: SearchMode) {
-    const klass = klassifizierung.trim()
     run({
       query: q,
       mode: searchMode,
       limit: RESULT_LIMIT,
-      filters: klass ? { klassifizierung: klass } : undefined,
+      filters: toSearchFilters(filters),
     })
   }
 
@@ -60,21 +63,27 @@ export default function App() {
           onSubmit={submit}
           busy={state.status === 'loading'}
         />
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-          <div className="grid gap-2">
-            <span className="text-sm font-medium">Modus</span>
-            <ModeToggle value={mode} onChange={changeMode} />
-          </div>
-          <div className="sm:w-64">
-            <Filters
-              klassifizierung={klassifizierung}
-              onKlassifizierungChange={setKlassifizierung}
-            />
-          </div>
+        <div className="grid gap-2">
+          <span className="text-sm font-medium">Modus</span>
+          <ModeToggle value={mode} onChange={changeMode} />
         </div>
+        <Filters value={filters} onChange={setFilters} />
       </section>
 
-      <ResultList state={state} />
+      <div className="mb-3 flex items-center justify-end">
+        <Button
+          variant={grouped ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => setGrouped((v) => !v)}
+          aria-pressed={grouped}
+          title="Treffer je Dokument zusammenfassen"
+        >
+          <Layers className="size-4" />
+          Nach Dokument gruppieren
+        </Button>
+      </div>
+
+      <ResultList state={state} grouped={grouped} />
     </div>
   )
 }
