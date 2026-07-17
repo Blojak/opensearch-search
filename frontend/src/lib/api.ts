@@ -54,11 +54,16 @@ async function errorMessage(response: Response): Promise<string> {
 }
 
 export async function search(request: SearchRequest): Promise<SearchResponse> {
+  // Built before the try on purpose: authHeader() throws ApiError(401) when no
+  // token is set, and the catch below would otherwise swallow that and report a
+  // missing token as "the backend is unreachable".
+  const headers = { 'Content-Type': 'application/json', ...authHeader() }
+
   let response: Response
   try {
     response = await fetch('/api/search', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...authHeader() },
+      headers,
       body: JSON.stringify(request),
     })
   } catch {
