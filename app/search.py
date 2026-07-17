@@ -108,6 +108,8 @@ def _filter_clauses(filters: SearchFilters | None) -> list[dict]:
         clauses.append({"term": {FIELD_KLASSIFIZIERUNG: filters.klassifizierung}})
     if filters.language is not None:
         clauses.append({"term": {FIELD_LANGUAGE: filters.language}})
+    if filters.mime_type:
+        clauses.append({"terms": {FIELD_MIME_TYPE: filters.mime_type}})
     if filters.created_from is not None or filters.created_to is not None:
         rng: dict = {}
         if filters.created_from is not None:
