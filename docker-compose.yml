@@ -112,8 +112,15 @@ services:
     ports:
       - "${KEYCLOAK_PORT:-8080}:8080"
     volumes:
-      - keycloak_data:/opt/keycloak/data
-      # Realm with the API client and a test user, imported on first start.
+      # Realm with the API client and the test users. Imported on every fresh
+      # container — deliberately WITHOUT a named volume for Keycloak's data:
+      # the realm file is the source of truth, and `--import-realm` only runs
+      # against an empty datastore. A persisted volume silently skips the import
+      # (and the admin bootstrap), leaving a realm without its users — which is
+      # exactly the trap that cost hours to diagnose. Recreating the container
+      # therefore resets Keycloak to the realm file, which is what a PoC wants.
+      # Anything clicked together in the admin UI is lost on recreate; put it in
+      # the realm file instead.
       - ./keycloak/realm-osearch.json:/opt/keycloak/data/import/realm-osearch.json:ro
     healthcheck:
       # The image ships no curl/wget, so probe the management port via bash.
@@ -168,4 +175,3 @@ volumes:
   opensearch_data:
   postgres_data:
   pgadmin_data:
-  keycloak_data:
