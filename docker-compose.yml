@@ -123,6 +123,44 @@ services:
       timeout: 5s
       retries: 20
 
+  # ---------------------------------------------------------------------------
+  # Frontend dev server in a container — for machines where no modern Node is
+  # available (the Ubuntu package is Node 18, too old for Vite, which needs the
+  # version pinned in frontend/.nvmrc). The image brings its own Node, so the
+  # host stays untouched.
+  #
+  # Opt-in via the profile, so it does not collide with running `npm run dev`
+  # natively on a machine that has Node:
+  #
+  #     docker compose --profile frontend up frontend
+  #
+  # The Flask API runs on the *host*, so the Vite proxy must not target the
+  # container's own localhost — hence API_TARGET + the host-gateway mapping.
+  # ---------------------------------------------------------------------------
+  frontend:
+    profiles: ["frontend"]
+    # Any image with a Node that satisfies Vite's engines: ^20.19.0 || >=22.12.0
+    # (Node 21 and 22.0-22.11 do NOT qualify). Override to use an image from an
+    # internal registry: FRONTEND_IMAGE=<registry>/<image> in .env.
+    image: ${FRONTEND_IMAGE:-node:24}
+    container_name: osearch_frontend
+    working_dir: /app
+    command: sh -c "npm install && npm run dev -- --host"
+    environment:
+      API_TARGET: ${API_TARGET:-http://host.docker.internal:5002}
+      # Behind a corporate mirror, point npm at it, e.g.
+      # NPM_CONFIG_REGISTRY: https://artifactory.example/api/npm/npm-remote/
+    ports:
+      - "${FRONTEND_PORT:-5173}:5173"
+    volumes:
+      - ./frontend:/app
+      # Anonymous volume: keep the container's node_modules. The host's would be
+      # built for the host and must not shadow it.
+      - /app/node_modules
+    extra_hosts:
+      # Lets the container reach the API on the host as host.docker.internal.
+      - "host.docker.internal:host-gateway"
+
 volumes:
   opensearch_data:
   postgres_data:
