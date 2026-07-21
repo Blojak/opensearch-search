@@ -110,11 +110,18 @@ class Document(Base):
         primary_key=True,
         server_default=text("gen_random_uuid()"),
     )
-    aktenzeichen: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    # aktenzeichen and klassifizierung are optional on purpose: bulk/directory
+    # ingest often has neither up front (the ML classifier fills klassifizierung
+    # later). Tightening this back up is a deliberate business decision for
+    # later. s3_object_key stays required — a document must have a storage
+    # location.
+    aktenzeichen: Mapped[str | None] = mapped_column(
+        String(64), nullable=True, index=True
+    )
     verfahren_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("verfahren.id"), nullable=True, index=True,
     )
-    klassifizierung: Mapped[str] = mapped_column(String(32), nullable=False)
+    klassifizierung: Mapped[str | None] = mapped_column(String(32), nullable=True)
     s3_object_key: Mapped[str] = mapped_column(Text, nullable=False)
     mime_type: Mapped[str | None] = mapped_column(String(128), nullable=True)
     language: Mapped[str] = mapped_column(

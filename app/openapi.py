@@ -48,9 +48,13 @@ SWAGGER_TEMPLATE = {
         },
         "IngestRequest": {
             "type": "object",
-            "required": ["aktenzeichen", "klassifizierung", "s3_object_key"],
+            "required": ["s3_object_key"],
             "properties": {
-                "aktenzeichen": {"type": "string", "example": "AZ-2026-0001"},
+                "aktenzeichen": {
+                    "type": "string",
+                    "description": "Optional.",
+                    "example": "AZ-2026-0001",
+                },
                 "verfahren_id": {
                     "type": "string",
                     "format": "uuid",
@@ -59,8 +63,8 @@ SWAGGER_TEMPLATE = {
                 "klassifizierung": {
                     "type": "string",
                     "description": (
-                        "Free string for now; later assigned by an ML classifier "
-                        "using the police taxonomy."
+                        "Optional. Free string for now; later assigned by an ML "
+                        "classifier using the police taxonomy."
                     ),
                     "example": "VS-NfD",
                 },

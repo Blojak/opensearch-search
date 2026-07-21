@@ -58,15 +58,18 @@ from app.opensearch_store import (
 class DocumentMeta:
     """Caller-supplied metadata for a document to ingest.
 
-    All identity fields are supplied by the caller (later: a UI). ``created_by``
-    and ``verfahren_id`` must reference existing rows in Postgres. ``language``
-    is optional: when omitted it is auto-detected from the content.
+    ``created_by`` and ``s3_object_key`` are required: a document has to belong
+    to someone and to have a storage location. ``aktenzeichen`` and
+    ``klassifizierung`` are optional, so bulk/directory ingest works without them
+    (a UI or the later classification step fills them in). ``verfahren_id`` must
+    reference an existing verfahren when given. ``language`` is auto-detected
+    from the content when omitted.
     """
 
-    aktenzeichen: str
-    klassifizierung: str
-    s3_object_key: str
     created_by: uuid.UUID
+    s3_object_key: str
+    aktenzeichen: str | None = None
+    klassifizierung: str | None = None
     verfahren_id: uuid.UUID | None = None
     mime_type: str = "text/plain"
     language: str | None = None  # ISO-639-1 code; auto-detected when omitted
@@ -78,7 +81,7 @@ class IngestResult:
 
     document_id: uuid.UUID
     version_number: int
-    aktenzeichen: str
+    aktenzeichen: str | None
     num_chunks: int
     deduplicated: bool  # True if identical content already existed (by hash)
 
