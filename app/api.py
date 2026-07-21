@@ -153,24 +153,23 @@ def _parse_meta(body: dict, created_by: uuid.UUID) -> DocumentMeta:
     ``created_by`` is passed in from the authenticated principal, never read from
     the body: a client must not be able to attribute a document to someone else.
     """
-    aktenzeichen = body.get("aktenzeichen")
-    if not aktenzeichen:
-        raise ApiError("'aktenzeichen' is required")
-    klassifizierung = body.get("klassifizierung")
-    if not klassifizierung:
-        raise ApiError("'klassifizierung' is required")
+    # s3_object_key stays required: a document must have a storage location.
     s3_object_key = body.get("s3_object_key")
     if not s3_object_key:
         raise ApiError("'s3_object_key' is required")
+
+    # aktenzeichen and klassifizierung are optional (empty string -> None).
+    aktenzeichen = body.get("aktenzeichen") or None
+    klassifizierung = body.get("klassifizierung") or None
 
     # Optional: an explicit language overrides the auto-detection at ingest.
     language = _parse_enum(Language, body.get("language"), "language")
 
     return DocumentMeta(
+        created_by=created_by,
+        s3_object_key=s3_object_key,
         aktenzeichen=aktenzeichen,
         klassifizierung=klassifizierung,
-        s3_object_key=s3_object_key,
-        created_by=created_by,
         verfahren_id=_parse_uuid(body.get("verfahren_id"), "verfahren_id"),
         language=language.value if language else None,
     )
