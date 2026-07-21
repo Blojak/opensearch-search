@@ -160,6 +160,17 @@ def main() -> None:
     created_by = resolve_created_by(
         uuid.UUID(args.created_by) if args.created_by else None
     )
+
+    # Create the index (with the knn_vector mapping) and the hybrid pipeline
+    # before indexing anything. Without this, a first bulk into a fresh
+    # OpenSearch auto-creates the index with a dynamic mapping — 'embedding'
+    # becomes a plain float array, and every semantic/hybrid search then fails
+    # with "embedding is not knn_vector type". The API does this on startup, but
+    # this CLI can run against a fresh cluster on its own.
+    from app.opensearch_store import ensure_setup
+
+    ensure_setup()
+
     new, dedup, failed = ingest_directory(root, created_by, extensions)
     print(
         f"Done: {new} new, {dedup} already indexed, {failed} failed "
