@@ -32,9 +32,9 @@ export interface SearchRequest {
 /** Document-level metadata carried on every hit (denormalized from Postgres). */
 export interface HitDocument {
   id: string
-  aktenzeichen: string
+  aktenzeichen: string | null
   verfahren_id: string | null
-  klassifizierung: string
+  klassifizierung: string | null
   language: string
   mime_type: string | null
   created_at: string

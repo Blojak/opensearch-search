@@ -5,6 +5,7 @@ import { formatDate } from '@/lib/format'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
+import { DocumentLabels } from './DocumentLabels'
 import { HitSnippet } from './HitSnippet'
 import { StoragePath } from './StoragePath'
 
@@ -24,11 +25,7 @@ export function DocumentGroupCard({ hits }: { hits: SearchHit[] }) {
       <CardHeader>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="font-medium">{doc.aktenzeichen}</span>
-            <Badge variant="secondary">{doc.klassifizierung}</Badge>
-            <Badge variant="outline" className="uppercase">
-              {doc.language}
-            </Badge>
+            <DocumentLabels doc={doc} />
             <Badge title="Fundstellen in diesen Ergebnissen">
               {hits.length} {hits.length === 1 ? 'Fundstelle' : 'Fundstellen'}
             </Badge>
